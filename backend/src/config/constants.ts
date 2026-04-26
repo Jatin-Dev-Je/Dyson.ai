@@ -1,0 +1,7 @@
+export const CONFIDENCE_THRESHOLD = 0.72
+export const MAX_GRAPH_DEPTH = 5
+export const MAX_CITATIONS_PER_CLAIM = 3
+export const MAX_SOURCE_EVENTS_PER_QUERY = 20
+export const EMBEDDING_DIMENSIONS = 1024
+export const MAX_INGESTION_RETRIES = 3
+export const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000 // 5 minutes
