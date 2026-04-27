@@ -102,6 +102,14 @@
     animation: shimmer 1.6s ease-in-out infinite;
   }
 
+  /* DysonMark connection-stroke draw — used by the linked/traced variants */
+  @keyframes dyson-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Editorial serif numerals for headlines */
+  .font-display { font-family: 'Instrument Serif', ui-serif, Georgia, serif; font-feature-settings: 'ss01', 'ss02'; }
+
   /* Citation underline */
   .cite {
     text-decoration: underline;

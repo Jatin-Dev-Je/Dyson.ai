@@ -8,32 +8,8 @@ import {
 import { Link } from 'react-router-dom'
 import { SourcePill } from '@/components/shared/SourcePill'
 import { ConfidenceBadge } from '@/components/shared/ConfidenceBadge'
+import { DysonMark } from '@/components/shared/DysonMark'
 import { cn } from '@/lib/utils'
-
-// ─── Brand mark ───────────────────────────────────────────────────────────
-// Dyson-sphere lattice: a central source captured by an orbital shell.
-// The mark IS the metaphor — Dyson captures every signal of "why".
-function DysonMark({ size = 28, className }: { size?: number; className?: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <g transform="translate(16 16)" stroke="currentColor" strokeWidth="1.1" fill="none">
-        <circle r="11" />
-        <ellipse rx="11" ry="3.6" />
-        <ellipse rx="11" ry="3.6" transform="rotate(60)" />
-        <ellipse rx="11" ry="3.6" transform="rotate(-60)" />
-      </g>
-      <circle cx="16" cy="16" r="1.7" fill="currentColor" />
-    </svg>
-  )
-}
 
 // ─── Hero background — one quiet radial, nothing more ─────────────────────
 function HeroBg() {
@@ -43,7 +19,7 @@ function HeroBg() {
         className="absolute inset-0"
         style={{
           backgroundImage:
-            'radial-gradient(circle at 50% 0%, rgba(99,102,241,0.08), transparent 55%)',
+            'radial-gradient(circle at 50% 0%, rgba(99,102,241,0.10), transparent 55%)',
         }}
       />
       <div
@@ -244,10 +220,10 @@ function Demo() {
                 ))}
               </div>
               <div className="flex gap-1">
-                <button className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-emerald-400 transition-colors">
+                <button className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-emerald-400 transition-colors" aria-label="Helpful">
                   <ThumbsUp className="w-3 h-3" />
                 </button>
-                <button className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-red-400 transition-colors">
+                <button className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-red-400 transition-colors" aria-label="Not helpful">
                   <ThumbsDown className="w-3 h-3" />
                 </button>
               </div>
@@ -261,10 +237,10 @@ function Demo() {
 
 // ─── Nav ──────────────────────────────────────────────────────────────────
 const navLinks: { label: string; href: string }[] = [
-  { label: 'Product',    href: '#features' },
+  { label: 'Product',      href: '#features' },
   { label: 'How it works', href: '#how-it-works' },
-  { label: 'Pricing',    href: '#pricing' },
-  { label: 'Changelog',  href: '#changelog' },
+  { label: 'Pricing',      href: '#pricing' },
+  { label: 'Changelog',    href: '#changelog' },
 ]
 
 function Nav() {
@@ -282,9 +258,9 @@ function Nav() {
       <div className="max-w-[1120px] mx-auto px-6 h-[60px] flex items-center justify-between">
 
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 flex-shrink-0 text-white">
-          <DysonMark size={22} className="text-white" />
-          <span className="font-medium text-[15px] tracking-[-0.01em]">Dyson</span>
+        <Link to="/" className="flex items-center gap-2 flex-shrink-0 text-white" aria-label="Dyson home">
+          <DysonMark size={20} className="text-white" />
+          <span className="font-medium text-[15px] tracking-[-0.015em]">Dyson</span>
         </Link>
 
         {/* Desktop nav */}
@@ -319,6 +295,8 @@ function Nav() {
         <button
           className="md:hidden p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.04]"
           onClick={() => setOpen(v => !v)}
+          aria-label="Toggle menu"
+          aria-expanded={open}
         >
           {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -384,50 +362,54 @@ function FadeUp({ children, delay = 0, className = '' }: { children: React.React
   )
 }
 
-// ─── Integration brand glyphs (real, not "Acme Corp") ─────────────────────
-function IntegrationLogo({ name }: { name: 'Slack' | 'GitHub' | 'Notion' | 'Linear' | 'Zoom' | 'Granola' }) {
-  const common = 'h-5 w-auto opacity-60 hover:opacity-100 transition-opacity'
+// ─── Integration brand glyphs ────────────────────────────────────────────
+type IntegrationName = 'Slack' | 'GitHub' | 'Notion' | 'Linear' | 'Zoom' | 'Discord'
+
+function IntegrationLogo({ name }: { name: IntegrationName }) {
+  const wrap = 'flex items-center gap-2 text-white/70 hover:text-white transition-colors duration-200'
+  const ico  = 'h-[18px] w-[18px] flex-shrink-0'
+
   switch (name) {
     case 'Slack':
       return (
-        <div className={`flex items-center gap-2 ${common}`}>
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
-          <span className="text-[14px] font-medium">Slack</span>
+        <div className={wrap}>
+          <svg viewBox="0 0 24 24" className={ico} fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+          <span className="text-[14px] font-medium tracking-[-0.005em]">Slack</span>
         </div>
       )
     case 'GitHub':
       return (
-        <div className={`flex items-center gap-2 ${common}`}>
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-          <span className="text-[14px] font-medium">GitHub</span>
+        <div className={wrap}>
+          <svg viewBox="0 0 24 24" className={ico} fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          <span className="text-[14px] font-medium tracking-[-0.005em]">GitHub</span>
         </div>
       )
     case 'Notion':
       return (
-        <div className={`flex items-center gap-2 ${common}`}>
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg>
-          <span className="text-[14px] font-medium">Notion</span>
+        <div className={wrap}>
+          <svg viewBox="0 0 24 24" className={ico} fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg>
+          <span className="text-[14px] font-medium tracking-[-0.005em]">Notion</span>
         </div>
       )
     case 'Linear':
       return (
-        <div className={`flex items-center gap-2 ${common}`}>
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M.403 13.795l9.802 9.803c5.005.992 9.467-1.94 11.225-6.422L7.539 3.282C3.115 5.087.181 9.45.403 13.795zm.836-7.928l16.894 16.893a12.014 12.014 0 0 0 2.726-1.948L3.187 3.142a12.014 12.014 0 0 0-1.948 2.725zM4.65 1.864l17.485 17.486a11.96 11.96 0 0 0 1.343-2.81L7.46.522a11.96 11.96 0 0 0-2.81 1.343zM10.17.058l13.772 13.772C24.79 8.395 20.997.094 14.553.094c-1.495 0-2.95.39-4.383-.036z"/></svg>
-          <span className="text-[14px] font-medium">Linear</span>
+        <div className={wrap}>
+          <svg viewBox="0 0 24 24" className={ico} fill="currentColor"><path d="M.403 13.795l9.802 9.803c5.005.992 9.467-1.94 11.225-6.422L7.539 3.282C3.115 5.087.181 9.45.403 13.795zm.836-7.928l16.894 16.893a12.014 12.014 0 0 0 2.726-1.948L3.187 3.142a12.014 12.014 0 0 0-1.948 2.725zM4.65 1.864l17.485 17.486a11.96 11.96 0 0 0 1.343-2.81L7.46.522a11.96 11.96 0 0 0-2.81 1.343zM10.17.058l13.772 13.772C24.79 8.395 20.997.094 14.553.094c-1.495 0-2.95.39-4.383-.036z"/></svg>
+          <span className="text-[14px] font-medium tracking-[-0.005em]">Linear</span>
         </div>
       )
     case 'Zoom':
       return (
-        <div className={`flex items-center gap-2 ${common}`}>
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.07 6.357v3.214l3.214-2.143v6.43H6.86V8.357h4.07z"/></svg>
-          <span className="text-[14px] font-medium">Zoom</span>
+        <div className={wrap}>
+          <svg viewBox="0 0 24 24" className={ico} fill="currentColor"><path d="M3.516 6.59A3.516 3.516 0 0 0 0 10.106v7.305A3.516 3.516 0 0 0 3.516 20.93h11.836a3.516 3.516 0 0 0 3.515-3.516v-7.305a3.516 3.516 0 0 0-3.515-3.515zm17.054 1.094-3.985 2.91v3.554l3.987 2.911a.586.586 0 0 0 .858-.519V8.2a.586.586 0 0 0-.86-.516Z"/></svg>
+          <span className="text-[14px] font-medium tracking-[-0.005em]">Zoom</span>
         </div>
       )
-    case 'Granola':
+    case 'Discord':
       return (
-        <div className={`flex items-center gap-2 ${common}`}>
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-          <span className="text-[14px] font-medium">Granola</span>
+        <div className={wrap}>
+          <svg viewBox="0 0 24 24" className={ico} fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418Z"/></svg>
+          <span className="text-[14px] font-medium tracking-[-0.005em]">Discord</span>
         </div>
       )
   }
@@ -468,7 +450,7 @@ export default function Landing() {
       <Nav />
 
       {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-      <section className="relative pt-[140px] pb-20 px-6 overflow-hidden">
+      <section className="relative pt-[140px] pb-24 px-6 overflow-hidden">
         <HeroBg />
 
         <div className="relative max-w-[1120px] mx-auto">
@@ -480,10 +462,13 @@ export default function Landing() {
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="flex justify-center mb-9"
           >
-            <a href="#" className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-sm px-3.5 py-1.5 text-[12px] text-white/60 hover:border-white/20 hover:text-white transition-all duration-200">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+            <a href="#" className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-sm pl-2 pr-3 py-1 text-[12px] text-white/60 hover:border-white/20 hover:text-white transition-all duration-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/25 text-primary px-2 py-[3px] text-[10px] font-medium uppercase tracking-[0.08em]">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+                </span>
+                Beta
               </span>
               <span>Now in private beta — request access</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -495,12 +480,14 @@ export default function Landing() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center mb-6"
+            className="text-center mb-7"
           >
-            <h1 className="text-[56px] sm:text-[72px] lg:text-[88px] font-medium leading-[0.98] tracking-[-0.045em] text-white">
+            <h1 className="text-[52px] sm:text-[72px] lg:text-[88px] font-medium leading-[0.98] tracking-[-0.045em] text-white">
               The system of record
               <br />
-              <span className="text-white/35">for </span><span className="italic font-serif">why</span><span className="text-white/35">.</span>
+              <span className="text-white/35">for </span>
+              <span className="font-display italic font-normal text-white">why</span>
+              <span className="text-white/35">.</span>
             </h1>
           </motion.div>
 
@@ -509,7 +496,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="text-[17px] text-white/55 text-center max-w-[540px] mx-auto leading-[1.6] mb-9"
+            className="text-[16.5px] sm:text-[17.5px] text-white/55 text-center max-w-[560px] mx-auto leading-[1.6] mb-10"
           >
             Dyson connects Slack, GitHub, Notion and meetings into one queryable
             context graph — and explains the reasoning behind every decision your team ever made.
@@ -520,12 +507,12 @@ export default function Landing() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="flex items-center justify-center gap-2 mb-6 flex-wrap"
+            className="flex items-center justify-center gap-2 mb-5 flex-wrap"
           >
             <Link to="/signup">
-              <button className="flex items-center gap-2 px-5 py-3 text-[14px] font-medium text-[#08080E] bg-white hover:bg-white/90 active:scale-[0.98] rounded-lg transition-all duration-150">
+              <button className="group flex items-center gap-2 px-5 py-3 text-[14px] font-medium text-[#08080E] bg-white hover:bg-white/90 active:scale-[0.98] rounded-lg transition-all duration-150 shadow-[0_8px_30px_-8px_rgba(255,255,255,0.25)]">
                 Connect your stack
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </Link>
             <button className="flex items-center gap-2 px-5 py-3 text-[14px] text-white/70 border border-white/10 hover:border-white/20 hover:text-white rounded-lg transition-all duration-150 hover:bg-white/[0.03]">
@@ -555,18 +542,20 @@ export default function Landing() {
       </section>
 
       {/* ══ INTEGRATIONS BAR ═════════════════════════════════════════════ */}
-      <section className="py-12 border-y border-white/[0.06] bg-white/[0.012]">
+      <section className="py-14 border-y border-white/[0.06] bg-white/[0.012]">
         <div className="max-w-[1120px] mx-auto px-6">
-          <p className="text-center text-[11px] font-mono text-white/35 uppercase tracking-[0.18em] mb-7">
+          <p className="text-center text-[11px] font-mono text-white/35 uppercase tracking-[0.18em] mb-8">
             Plugs into the stack you already use
           </p>
-          <div className="flex items-center justify-center gap-x-12 gap-y-6 flex-wrap text-white">
-            <IntegrationLogo name="Slack" />
-            <IntegrationLogo name="GitHub" />
-            <IntegrationLogo name="Notion" />
-            <IntegrationLogo name="Linear" />
-            <IntegrationLogo name="Zoom" />
-            <IntegrationLogo name="Granola" />
+          <div className="flex items-center justify-center gap-x-8 sm:gap-x-10 gap-y-5 flex-wrap">
+            {(['Slack', 'GitHub', 'Notion', 'Linear', 'Zoom', 'Discord'] as const).map((name, i, arr) => (
+              <div key={name} className="flex items-center gap-x-8 sm:gap-x-10">
+                <IntegrationLogo name={name} />
+                {i < arr.length - 1 && (
+                  <span className="hidden sm:inline-block w-px h-4 bg-white/[0.06]" />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -581,14 +570,22 @@ export default function Landing() {
             </h2>
           </FadeUp>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-8 border-t border-white/[0.08] pt-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 border-t border-white/[0.08]">
             {[
               { value: '28%',    label: 'of engineer time spent reconstructing context', sub: 'McKinsey, 2024' },
               { value: '1 day',  label: 'to find the rationale behind a 6-month-old decision', sub: 'Dyson research' },
               { value: '$1.3M',  label: 'annual cost of context loss per 100-person team', sub: 'Dyson estimate' },
-            ].map((stat, i) => (
-              <FadeUp key={i} delay={i * 0.1}>
-                <p className="text-[44px] font-medium tracking-[-0.03em] text-white leading-none mb-3">{stat.value}</p>
+            ].map((stat, i, arr) => (
+              <FadeUp
+                key={i}
+                delay={i * 0.1}
+                className={cn(
+                  'pt-10 md:pr-10',
+                  i < arr.length - 1 && 'md:border-r border-white/[0.08]',
+                  i > 0 && 'md:pl-10'
+                )}
+              >
+                <p className="text-[44px] font-medium tracking-[-0.03em] text-white leading-none mb-3 tabular-nums">{stat.value}</p>
                 <p className="text-[14px] text-white/65 leading-relaxed mb-1.5">{stat.label}</p>
                 <p className="text-[11px] font-mono text-white/30">{stat.sub}</p>
               </FadeUp>
@@ -612,14 +609,14 @@ export default function Landing() {
               <FadeUp key={i} delay={i * 0.1}>
                 <div className="relative rounded-xl border border-white/[0.08] bg-[#0C0C14] p-7 h-full hover:border-white/20 hover:bg-[#10101A] transition-all duration-300 group">
                   <div className="flex items-center justify-between mb-6">
-                    <span className="text-[11px] font-mono font-medium text-white/35">{step.n}</span>
+                    <span className="text-[11px] font-mono font-medium text-white/35 tabular-nums">{step.n}</span>
                     {i < steps.length - 1 && (
                       <div className="hidden md:block absolute -right-2.5 top-1/2 -translate-y-1/2 z-10">
                         <ChevronRight className="w-4 h-4 text-white/25" />
                       </div>
                     )}
                   </div>
-                  <h3 className="text-[16px] font-medium text-white mb-2.5">{step.title}</h3>
+                  <h3 className="text-[16px] font-medium text-white mb-2.5 tracking-[-0.005em]">{step.title}</h3>
                   <p className="text-[13.5px] text-white/55 leading-[1.65] mb-5">{step.desc}</p>
                   <div className="flex gap-2">
                     {step.sources.map(s => <SourcePill key={s} source={s} />)}
@@ -668,8 +665,9 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {testimonials.map((t, i) => (
               <FadeUp key={i} delay={i * 0.1}>
-                <div className="rounded-xl border border-white/[0.08] bg-[#0C0C14] p-7 h-full hover:border-white/20 transition-all duration-300 flex flex-col">
-                  <p className="text-[14.5px] text-white/80 leading-[1.7] mb-7 flex-1">"{t.q}"</p>
+                <div className="relative rounded-xl border border-white/[0.08] bg-[#0C0C14] p-7 h-full hover:border-white/20 transition-all duration-300 flex flex-col">
+                  <span aria-hidden className="absolute top-4 right-5 font-display text-[42px] leading-none text-white/15 select-none">"</span>
+                  <p className="text-[14.5px] text-white/80 leading-[1.7] mb-7 flex-1">{t.q}</p>
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-[12px] font-medium text-white/80">{t.name[0]}</span>
@@ -703,19 +701,19 @@ export default function Landing() {
                 <div className={cn(
                   'relative rounded-xl p-7 h-full flex flex-col transition-all duration-300',
                   plan.highlight
-                    ? 'border border-white bg-white text-[#08080E]'
+                    ? 'border border-white/95 bg-white text-[#08080E] shadow-[0_24px_60px_-12px_rgba(255,255,255,0.18)]'
                     : 'border border-white/[0.08] bg-[#0C0C14] hover:border-white/20'
                 )}>
                   {plan.highlight && (
-                    <span className="absolute -top-2.5 left-7 text-[10px] font-mono font-medium text-white bg-[#08080E] border border-white/20 px-2.5 py-0.5 rounded-full uppercase tracking-[0.1em]">
-                      Recommended
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-mono font-medium text-white bg-[#08080E] border border-white/15 px-2.5 py-1 rounded-full uppercase tracking-[0.12em] whitespace-nowrap">
+                      Most popular
                     </span>
                   )}
 
                   <div className="mb-6">
                     <p className={cn('text-[13px] font-medium mb-3', plan.highlight ? 'text-[#08080E]/70' : 'text-white/65')}>{plan.name}</p>
                     <div className="flex items-end gap-1 mb-2">
-                      <span className="text-[40px] font-medium tracking-[-0.03em] leading-none">{plan.price}</span>
+                      <span className="text-[40px] font-medium tracking-[-0.03em] leading-none tabular-nums">{plan.price}</span>
                       {plan.period && <span className={cn('text-[13px] mb-1', plan.highlight ? 'text-[#08080E]/50' : 'text-white/40')}>{plan.period}</span>}
                     </div>
                     <p className={cn('text-[12.5px]', plan.highlight ? 'text-[#08080E]/60' : 'text-white/40')}>{plan.desc}</p>
@@ -733,8 +731,8 @@ export default function Landing() {
                   <button className={cn(
                     'w-full py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150',
                     plan.highlight
-                      ? 'bg-[#08080E] text-white hover:bg-[#1a1a26]'
-                      : 'border border-white/10 text-white/80 hover:border-white/25 hover:text-white hover:bg-white/[0.03]'
+                      ? 'bg-[#08080E] text-white hover:bg-[#1a1a26] active:scale-[0.98]'
+                      : 'border border-white/10 text-white/80 hover:border-white/25 hover:text-white hover:bg-white/[0.03] active:scale-[0.98]'
                   )}>
                     {plan.cta}
                   </button>
@@ -764,18 +762,18 @@ export default function Landing() {
               }}
             />
             <div className="relative px-8 py-20 sm:py-24 text-center">
-              <DysonMark size={44} className="text-white/85 mx-auto mb-8" />
+              <DysonMark size={48} variant="linked" animate className="text-white/85 mx-auto mb-8" />
               <h2 className="text-[40px] sm:text-[56px] font-medium tracking-[-0.04em] leading-[1.0] mb-5 text-white">
-                Stop losing the why.
+                Stop losing the <span className="font-display italic font-normal">why</span>.
               </h2>
               <p className="text-[15px] text-white/55 leading-[1.65] mb-9 max-w-[460px] mx-auto">
                 Connect your stack in 3 minutes. Ask your first WHY question today.
               </p>
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <Link to="/signup">
-                  <button className="flex items-center gap-2 px-5 py-3 text-[14px] font-medium text-[#08080E] bg-white hover:bg-white/90 active:scale-[0.98] rounded-lg transition-all duration-150">
+                  <button className="group flex items-center gap-2 px-5 py-3 text-[14px] font-medium text-[#08080E] bg-white hover:bg-white/90 active:scale-[0.98] rounded-lg transition-all duration-150">
                     Get started
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </Link>
                 <button className="flex items-center gap-2 px-5 py-3 text-[14px] text-white/70 border border-white/10 hover:border-white/20 hover:text-white rounded-lg transition-all duration-150 hover:bg-white/[0.03]">
@@ -792,12 +790,12 @@ export default function Landing() {
         <div className="max-w-[1120px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
             <div className="col-span-2">
-              <Link to="/" className="flex items-center gap-2 mb-4 text-white">
+              <Link to="/" className="flex items-center gap-2 mb-4 text-white" aria-label="Dyson home">
                 <DysonMark size={20} className="text-white" />
-                <span className="font-medium text-[15px]">Dyson</span>
+                <span className="font-medium text-[15px] tracking-[-0.015em]">Dyson</span>
               </Link>
               <p className="text-[13px] text-white/40 leading-relaxed max-w-[260px]">
-                Context infrastructure for modern engineering teams. The system of record for why.
+                Context infrastructure for modern engineering teams. The system of record for <span className="font-display italic">why</span>.
               </p>
             </div>
             {[
@@ -828,11 +826,6 @@ export default function Landing() {
 }
 
 // ─── Bento card ───────────────────────────────────────────────────────────
-type Feature = (typeof featuresType)[number]
-const featuresType = [
-  { icon: Zap, tag: '', title: '', desc: '', accent: 'primary' as const, size: 'wide' as const },
-] as const
-
 function FeatureCard({ f, className }: { f: typeof features[number]; className?: string }) {
   const Icon = f.icon
   return (

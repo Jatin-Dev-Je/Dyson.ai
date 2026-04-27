@@ -6,8 +6,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['GeistVariable', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        sans:    ['GeistVariable', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        mono:    ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        serif:   ['"Instrument Serif"', 'ui-serif', 'Georgia', 'Cambria', 'serif'],
+        display: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
       },
 
       colors: {
