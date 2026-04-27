@@ -85,16 +85,18 @@ export async function buildApp() {
   })
 
   // ── Module routes ──────────────────────────────────────────────────────────
-  await app.register(import('./modules/auth/auth.routes.js'),         { prefix: '/api/v1/auth' })
-  await app.register(import('./modules/workspace/workspace.routes.js'),{ prefix: '/api/v1/workspaces' })
-  await app.register(import('./modules/users/users.routes.js'),        { prefix: '/api/v1/users' })
+  await app.register(import('./modules/auth/auth.routes.js'),          { prefix: '/api/v1/auth' })
+  await app.register(import('./modules/workspace/workspace.routes.js'), { prefix: '/api/v1/workspaces' })
+  await app.register(import('./modules/users/users.routes.js'),         { prefix: '/api/v1/users' })
+  await app.register(import('./modules/connectors/connectors.routes.js'),{ prefix: '/api/v1/connectors' })
 
-  // Existing stub routes (will be replaced week by week)
-  await app.register(import('./api/routes/v1/why.routes.js'),         { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/graph.routes.js'),       { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/decisions.routes.js'),   { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/connectors.routes.js'),  { prefix: '/api/v1' })
-  await app.register(import('./api/routes/webhooks/slack.webhook.js'),{ prefix: '/webhooks' })
+  // Stub routes — replaced week by week
+  await app.register(import('./api/routes/v1/why.routes.js'),          { prefix: '/api/v1' })
+  await app.register(import('./api/routes/v1/graph.routes.js'),        { prefix: '/api/v1' })
+  await app.register(import('./api/routes/v1/decisions.routes.js'),    { prefix: '/api/v1' })
+
+  // Webhooks — real implementation
+  await app.register(import('./api/routes/webhooks/slack.webhook.js'), { prefix: '/webhooks' })
   await app.register(import('./api/routes/webhooks/github.webhook.js'),{ prefix: '/webhooks' })
 
   // ── Global error handler ───────────────────────────────────────────────────
