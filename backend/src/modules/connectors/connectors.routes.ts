@@ -35,11 +35,10 @@ export default async function connectorsRoutes(app: FastifyInstance) {
     schema: { tags: ['Connectors'], summary: 'Slack OAuth callback' },
   }, async (req, reply) => {
     const { code, state } = SlackCallbackSchema.parse(req.query)
-    const { teamName, tenantId } = await handleSlackCallback(code, state)
-    // Redirect to frontend success page
-    return reply.redirect(
-      `${(req.headers.origin as string | undefined) ?? 'http://localhost:3000'}/app/settings/sources?connected=slack&team=${encodeURIComponent(teamName)}`
-    )
+    const result = await handleSlackCallback(code, state)
+    const origin = typeof req.headers.origin === 'string' ? req.headers.origin : 'http://localhost:3000'
+    const team   = result.teamName ?? ''
+    return reply.redirect(`${origin}/app/settings/sources?connected=slack&team=${encodeURIComponent(team)}`)
   })
 
   // ── POST /api/v1/connectors/github/connect ───────────────────────────────
@@ -58,9 +57,8 @@ export default async function connectorsRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { installation_id, state } = GitHubCallbackSchema.parse(req.query)
     await handleGitHubCallback(installation_id, state)
-    return reply.redirect(
-      `${(req.headers.origin as string | undefined) ?? 'http://localhost:3000'}/app/settings/sources?connected=github`
-    )
+    const origin = typeof req.headers.origin === 'string' ? req.headers.origin : 'http://localhost:3000'
+    return reply.redirect(`${origin}/app/settings/sources?connected=github`)
   })
 
   // ── DELETE /api/v1/connectors/:id ────────────────────────────────────────

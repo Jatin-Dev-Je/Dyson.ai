@@ -3,34 +3,60 @@ import { insertRawEvent } from './ingestion.repository.js'
 import { normalizeSlackEvent } from './connectors/slack/slack.handler.js'
 import { normalizeGitHubEvent } from './connectors/github/github.handler.js'
 import type { SlackEvent, GitHubEvent } from './ingestion.types.js'
-import { findConnector } from '../connectors/connectors.repository.js'
+import { enqueue } from '@/infra/queue/queue.client.js'
 import { EventSource } from '@/shared/types/entities.js'
+
+// ─── Shared: store + enqueue ──────────────────────────────────────────────
+
+async function storeAndEnqueue(
+  tenantId: string,
+  normalized: ReturnType<typeof normalizeSlackEvent>,
+  logger: FastifyBaseLogger
+) {
+  if (!normalized) return null
+
+  const stored = await insertRawEvent(tenantId, normalized)
+  if (!stored) {
+    // Duplicate event — idempotent no-op
+    logger.debug({ externalId: normalized.externalId }, 'Duplicate event skipped')
+    return null
+  }
+
+  // Enqueue processing job — decoupled from ingestion
+  await enqueue('process-event', {
+    eventId:  stored.id,
+    tenantId,
+    event: {
+      ...normalized,
+      occurredAt: normalized.occurredAt.toISOString(),
+    },
+  }, logger)
+
+  return stored
+}
 
 // ─── Slack ingestion ──────────────────────────────────────────────────────
 
 export async function ingestSlackEvent(
   tenantId: string,
-  payload: SlackEvent,
-  logger: FastifyBaseLogger
+  payload:  SlackEvent,
+  logger:   FastifyBaseLogger
 ) {
   const normalized = normalizeSlackEvent(payload, payload.team_id)
 
   if (!normalized) {
-    logger.debug({ eventType: payload.event?.type }, 'Slack event skipped (not actionable)')
+    logger.debug({ eventType: payload.event?.type }, 'Slack event not actionable — skipped')
     return null
   }
 
-  const stored = await insertRawEvent(tenantId, normalized)
+  const stored = await storeAndEnqueue(tenantId, normalized, logger)
 
-  if (!stored) {
-    logger.debug({ externalId: normalized.externalId }, 'Slack event duplicate — skipped')
-    return null
+  if (stored) {
+    logger.info(
+      { tenantId, rawEventId: stored.id, source: EventSource.Slack },
+      'Slack event ingested and queued for processing'
+    )
   }
-
-  logger.info(
-    { tenantId, source: EventSource.Slack, externalId: normalized.externalId },
-    'Raw event ingested'
-  )
 
   return stored
 }
@@ -38,65 +64,59 @@ export async function ingestSlackEvent(
 // ─── GitHub ingestion ─────────────────────────────────────────────────────
 
 export async function ingestGitHubEvent(
-  tenantId: string,
-  eventType: string,
-  payload: GitHubEvent,
+  tenantId:   string,
+  eventType:  string,
+  payload:    GitHubEvent,
   deliveryId: string,
-  logger: FastifyBaseLogger
+  logger:     FastifyBaseLogger
 ) {
   const normalized = normalizeGitHubEvent(eventType, payload, deliveryId)
 
   if (!normalized) {
-    logger.debug({ eventType }, 'GitHub event skipped (not actionable)')
+    logger.debug({ eventType }, 'GitHub event not actionable — skipped')
     return null
   }
 
-  const stored = await insertRawEvent(tenantId, normalized)
+  const stored = await storeAndEnqueue(tenantId, normalized, logger)
 
-  if (!stored) {
-    logger.debug({ externalId: normalized.externalId }, 'GitHub event duplicate — skipped')
-    return null
+  if (stored) {
+    logger.info(
+      { tenantId, rawEventId: stored.id, source: EventSource.GitHub, eventType },
+      'GitHub event ingested and queued for processing'
+    )
   }
-
-  logger.info(
-    { tenantId, source: EventSource.GitHub, externalId: normalized.externalId, eventType },
-    'Raw event ingested'
-  )
 
   return stored
 }
 
-// ─── Resolve tenant from webhook ─────────────────────────────────────────
-// Webhooks don't carry a JWT — we resolve tenantId from the connected source
+// ─── Tenant resolution from webhook headers ───────────────────────────────
+// Webhooks don't carry a JWT — resolve tenantId from stored connector metadata
 
 export async function resolveTenantFromSlackTeam(teamId: string): Promise<string | null> {
-  // Search connected_sources for this Slack team
-  // We store teamId in the metadata JSON
-  const { db } = await import('@/infra/db/client.js')
+  const { db }               = await import('@/infra/db/client.js')
   const { connectedSources } = await import('@/infra/db/schema/index.js')
-  const { eq, sql } = await import('drizzle-orm')
+  const { sql }              = await import('drizzle-orm')
 
   const [row] = await db
     .select({ tenantId: connectedSources.tenantId })
     .from(connectedSources)
-    .where(
-      sql`${connectedSources.metadata}::jsonb ->> 'teamId' = ${teamId}
-          AND ${connectedSources.source} = ${EventSource.Slack}
-          AND ${connectedSources.isActive} = true`
-    )
+    .where(sql`
+      ${connectedSources.metadata}::jsonb ->> 'teamId' = ${teamId}
+      AND ${connectedSources.source} = ${EventSource.Slack}
+      AND ${connectedSources.isActive} = true
+    `)
     .limit(1)
 
   return row?.tenantId ?? null
 }
 
-export async function resolveTenantFromGitHubRepo(repoFullName: string): Promise<string | null> {
-  // For GitHub App installs, all repos under the installation map to the same tenant
-  // We'll resolve by checking which connector has an active GitHub installation
-  // In a real impl, store repo→tenantId mapping during installation
-  const { db } = await import('@/infra/db/client.js')
+export async function resolveTenantFromGitHubRepo(_repoFullName: string): Promise<string | null> {
+  const { db }               = await import('@/infra/db/client.js')
   const { connectedSources } = await import('@/infra/db/schema/index.js')
-  const { eq } = await import('drizzle-orm')
+  const { eq }               = await import('drizzle-orm')
 
+  // In Week 4 we'll store a repo→tenantId mapping during installation
+  // For now, return the first active GitHub connector's tenant
   const [row] = await db
     .select({ tenantId: connectedSources.tenantId })
     .from(connectedSources)

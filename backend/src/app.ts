@@ -95,9 +95,12 @@ export async function buildApp() {
   await app.register(import('./api/routes/v1/graph.routes.js'),        { prefix: '/api/v1' })
   await app.register(import('./api/routes/v1/decisions.routes.js'),    { prefix: '/api/v1' })
 
-  // Webhooks — real implementation
+  // Webhooks
   await app.register(import('./api/routes/webhooks/slack.webhook.js'), { prefix: '/webhooks' })
   await app.register(import('./api/routes/webhooks/github.webhook.js'),{ prefix: '/webhooks' })
+
+  // Job handlers — called by Cloud Tasks (or inline in dev)
+  await app.register(import('./api/routes/jobs.routes.js'),            { prefix: '/jobs' })
 
   // ── Global error handler ───────────────────────────────────────────────────
   app.setErrorHandler((error: unknown, request, reply) => {
