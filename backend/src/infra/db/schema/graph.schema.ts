@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamptz, real, jsonb, index } from 'drizzle-orm/pg-core'
+﻿import { pgTable, uuid, text, timestamp, real, jsonb, index } from 'drizzle-orm/pg-core'
 import { tenants } from './tenants.schema.js'
 import { rawEvents } from './events.schema.js'
 
@@ -13,8 +13,8 @@ export const contextNodes = pgTable('context_nodes', {
   summary: text('summary').notNull(),            // LLM-generated summary for retrieval
   sourceUrl: text('source_url'),                 // Deep link to original artifact
   metadata: jsonb('metadata'),
-  occurredAt: timestamptz('occurred_at').notNull(),
-  createdAt: timestamptz('created_at').notNull().defaultNow(),
+  occurredAt: timestamp('occurred_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   tenantIdx: index('nodes_tenant_idx').on(table.tenantId),
   entityTypeIdx: index('nodes_entity_type_idx').on(table.tenantId, table.entityType),
@@ -27,13 +27,13 @@ export const causalEdges = pgTable('causal_edges', {
   sourceNodeId: uuid('source_node_id').notNull().references(() => contextNodes.id, { onDelete: 'cascade' }),
   targetNodeId: uuid('target_node_id').notNull().references(() => contextNodes.id, { onDelete: 'cascade' }),
   relationshipType: text('relationship_type').notNull(), // RelationshipType enum
-  confidence: real('confidence').notNull(),              // 0–1, from cross-source linker
-  // User can flag an edge as incorrect — feeds back to linker training
+  confidence: real('confidence').notNull(),              // 0â€“1, from cross-source linker
+  // User can flag an edge as incorrect â€” feeds back to linker training
   isFlagged: text('is_flagged'),
-  flaggedAt: timestamptz('flagged_at'),
+  flaggedAt: timestamp('flagged_at'),
   flaggedBy: uuid('flagged_by'),
   metadata: jsonb('metadata'),
-  createdAt: timestamptz('created_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   tenantIdx: index('edges_tenant_idx').on(table.tenantId),
   sourceIdx: index('edges_source_idx').on(table.sourceNodeId),
@@ -41,3 +41,4 @@ export const causalEdges = pgTable('causal_edges', {
   // Only publish edges above confidence threshold
   confidenceIdx: index('edges_confidence_idx').on(table.tenantId, table.confidence),
 }))
+

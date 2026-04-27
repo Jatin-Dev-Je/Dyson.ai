@@ -1,5 +1,7 @@
 import Fastify from 'fastify'
 import { env } from './config/env.js'
+import { db } from './infra/db/client.js'
+import { sql } from 'drizzle-orm'
 
 export async function buildApp() {
   const app = Fastify({
@@ -8,77 +10,113 @@ export async function buildApp() {
       ...(env.NODE_ENV !== 'production' && {
         transport: { target: 'pino-pretty', options: { colorize: true } },
       }),
+      // Redact sensitive fields from all log output
+      redact: ['req.headers.authorization', 'req.body.password', 'req.body.refreshToken'],
     },
     trustProxy: true,
+    // Reject payloads larger than 1MB
+    bodyLimit: 1_048_576,
   })
 
-  // ── Security & middleware plugins ──────────────────────────────────────────
-  await app.register(import('@fastify/helmet'))
+  // ── Security plugins ───────────────────────────────────────────────────────
+  await app.register(import('@fastify/helmet'), {
+    contentSecurityPolicy: env.NODE_ENV === 'production',
+  })
+
   await app.register(import('@fastify/cors'), {
-    origin: env.CORS_ORIGINS.split(','),
+    origin:      env.CORS_ORIGINS.split(',').map(o => o.trim()),
     credentials: true,
+    methods:     ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   })
+
+  // Global rate limit — individual routes override for stricter limits
   await app.register(import('@fastify/rate-limit'), {
-    max: env.RATE_LIMIT_MAX_PER_MINUTE,
+    max:        env.RATE_LIMIT_MAX_PER_MINUTE,
     timeWindow: '1 minute',
+    errorResponseBuilder: () => ({
+      error: { code: 'RATE_LIMITED', message: 'Too many requests — slow down' },
+    }),
   })
+
   await app.register(import('@fastify/formbody'))
+
   await app.register(import('@fastify/jwt'), {
     secret: env.JWT_SECRET,
+    sign:   { algorithm: 'HS256' },
   })
 
-  // ── API Documentation ──────────────────────────────────────────────────────
+  // ── API Documentation (dev only) ───────────────────────────────────────────
   if (env.SWAGGER_ENABLED) {
     await app.register(import('@fastify/swagger'), {
       openapi: {
         info: {
-          title: 'Dyson API',
+          title:       'Dyson API',
           description: 'Context infrastructure for modern engineering teams',
-          version: '1.0.0',
+          version:     '1.0.0',
         },
         components: {
           securitySchemes: {
             bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
           },
         },
-        security: [{ bearerAuth: [] }],
       },
     })
     await app.register(import('@fastify/swagger-ui'), {
       routePrefix: '/docs',
+      uiConfig:    { persistAuthorization: true },
     })
   }
 
   // ── Health checks ──────────────────────────────────────────────────────────
-  app.get('/health', { schema: { tags: ['System'] } }, async () => ({ status: 'ok' }))
+  // /health — liveness (always fast, no DB)
+  app.get('/health', { schema: { hide: true } }, async () => ({
+    status: 'ok',
+    ts:     new Date().toISOString(),
+  }))
 
-  app.get('/health/ready', { schema: { tags: ['System'] } }, async () => {
-    // TODO: check DB + Pub/Sub connectivity
-    return { status: 'ok' }
+  // /health/ready — readiness (checks DB connection)
+  app.get('/health/ready', { schema: { hide: true } }, async (_req, reply) => {
+    try {
+      await db.execute(sql`SELECT 1`)
+      return { status: 'ok' }
+    } catch {
+      return reply.status(503).send({ status: 'unavailable', reason: 'database' })
+    }
   })
 
-  // ── API Routes ─────────────────────────────────────────────────────────────
-  await app.register(import('./api/routes/v1/why.routes.js'), { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/graph.routes.js'), { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/decisions.routes.js'), { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/connectors.routes.js'), { prefix: '/api/v1' })
-  await app.register(import('./api/routes/webhooks/slack.webhook.js'), { prefix: '/webhooks' })
-  await app.register(import('./api/routes/webhooks/github.webhook.js'), { prefix: '/webhooks' })
+  // ── Module routes ──────────────────────────────────────────────────────────
+  await app.register(import('./modules/auth/auth.routes.js'),         { prefix: '/api/v1/auth' })
+  await app.register(import('./modules/workspace/workspace.routes.js'),{ prefix: '/api/v1/workspaces' })
+  await app.register(import('./modules/users/users.routes.js'),        { prefix: '/api/v1/users' })
+
+  // Existing stub routes (will be replaced week by week)
+  await app.register(import('./api/routes/v1/why.routes.js'),         { prefix: '/api/v1' })
+  await app.register(import('./api/routes/v1/graph.routes.js'),       { prefix: '/api/v1' })
+  await app.register(import('./api/routes/v1/decisions.routes.js'),   { prefix: '/api/v1' })
+  await app.register(import('./api/routes/v1/connectors.routes.js'),  { prefix: '/api/v1' })
+  await app.register(import('./api/routes/webhooks/slack.webhook.js'),{ prefix: '/webhooks' })
+  await app.register(import('./api/routes/webhooks/github.webhook.js'),{ prefix: '/webhooks' })
 
   // ── Global error handler ───────────────────────────────────────────────────
-  app.setErrorHandler((error, _request, reply) => {
-    const isDysonError = 'code' in error && 'statusCode' in error
+  app.setErrorHandler((error: unknown, request, reply) => {
+    const err = error as Record<string, unknown>
+    const isDysonError = typeof err.code === 'string' && typeof err.statusCode === 'number'
 
     if (isDysonError) {
-      return reply.status((error as { statusCode: number }).statusCode).send({
-        error: {
-          code: (error as { code: string }).code,
-          message: error.message,
-        },
+      const code       = err.code as string
+      const statusCode = err.statusCode as number
+      const message    = typeof err.message === 'string' ? err.message : 'An error occurred'
+      if (statusCode >= 500) request.log.error({ code }, message)
+      return reply.status(statusCode).send({ error: { code, message } })
+    }
+
+    if (err.validation) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Request validation failed' },
       })
     }
 
-    app.log.error(error)
+    request.log.error(error)
     return reply.status(500).send({
       error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
     })
