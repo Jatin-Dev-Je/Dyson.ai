@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
+import { writeAudit } from '@/modules/audit/audit.service.js'
 import {
   ListDecisionsQuerySchema, FlagEdgeSchema,
   getDecisions, getDecision, getDecisionTimeline, flagEdge,
@@ -72,10 +73,21 @@ export default async function decisionsRoutes(app: FastifyInstance) {
       body: zodToJsonSchema(FlagEdgeSchema),
     },
   }, async (req, reply) => {
-    const { tid, sub } = req.user as { tid: string; sub: string }
-    const { id }       = req.params as { id: string }
-    const { edgeId }   = FlagEdgeSchema.parse(req.body)
-    const updated      = await flagEdge(edgeId, tid, sub)
+    const { tid, sub }       = req.user as { tid: string; sub: string }
+    const { id }             = req.params as { id: string }
+    const { edgeId, reason } = FlagEdgeSchema.parse(req.body)
+    const updated            = await flagEdge(edgeId, tid, sub)
+
+    void writeAudit({
+      tenantId:  tid,
+      actorId:   sub,
+      action:    'decision.flagged',
+      resourceType: 'decision',
+      resourceId: id,
+      metadata:  { edgeId, reason: reason ?? null },
+      ipAddress: req.ip,
+    })
+
     return reply.send({ data: updated })
   })
 }

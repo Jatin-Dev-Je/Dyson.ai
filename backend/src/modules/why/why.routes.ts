@@ -1,6 +1,8 @@
+import { createHash } from 'crypto'
 import type { FastifyInstance } from 'fastify'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
+import { writeAudit } from '@/modules/audit/audit.service.js'
 import {
   AskWhySchema, HistoryQuerySchema, FeedbackSchema,
   askWhy, getHistory, getQuery, submitFeedback,
@@ -23,6 +25,23 @@ export default async function whyRoutes(app: FastifyInstance) {
     const { sub, tid }  = req.user as { sub: string; tid: string }
     const { question }  = AskWhySchema.parse(req.body)
     const result        = await askWhy(question, tid, sub, req.log)
+
+    // Audit only the query metadata — never the question text (PII per CLAUDE.md §15)
+    void writeAudit({
+      tenantId:  tid,
+      actorId:   sub,
+      action:    'why.query',
+      resourceType: 'why_query',
+      resourceId: result.queryId,
+      metadata:  {
+        questionHash: createHash('sha256').update(question).digest('hex').slice(0, 16),
+        confidence:   result.confidence,
+        cannotAnswer: result.cannotAnswer,
+        citations:    result.citations.length,
+        latencyMs:    result.latencyMs,
+      },
+      ipAddress: req.ip,
+    })
 
     return reply.send({
       data: result,
@@ -78,10 +97,21 @@ export default async function whyRoutes(app: FastifyInstance) {
       body: zodToJsonSchema(FeedbackSchema),
     },
   }, async (req, reply) => {
-    const { tid }   = req.user as { tid: string }
-    const { id }    = req.params as { id: string }
-    const { score } = FeedbackSchema.parse(req.body)
-    const updated   = await submitFeedback(id, tid, score)
+    const { tid, sub } = req.user as { tid: string; sub: string }
+    const { id }       = req.params as { id: string }
+    const { score }    = FeedbackSchema.parse(req.body)
+    const updated      = await submitFeedback(id, tid, score)
+
+    void writeAudit({
+      tenantId:  tid,
+      actorId:   sub,
+      action:    'why.feedback',
+      resourceType: 'why_query',
+      resourceId: id,
+      metadata:  { score },
+      ipAddress: req.ip,
+    })
+
     return reply.send({ data: updated })
   })
 }

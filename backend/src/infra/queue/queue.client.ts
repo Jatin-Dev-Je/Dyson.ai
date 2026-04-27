@@ -5,6 +5,7 @@ export type JobName =
   | 'process-event'
   | 'generate-embeddings'
   | 'build-edges'
+  | 'backfill-source'
 
 type JobPayload = Record<string, unknown>
 
@@ -53,6 +54,11 @@ async function executeInline(job: JobName, payload: JobPayload, logger: FastifyB
       case 'build-edges': {
         const { handleBuildEdges } = await import('@/jobs/build-edges.job.js')
         await handleBuildEdges(payload, logger)
+        break
+      }
+      case 'backfill-source': {
+        const { handleBackfillSource } = await import('@/jobs/backfill-source.job.js')
+        await handleBackfillSource(payload, logger)
         break
       }
     }

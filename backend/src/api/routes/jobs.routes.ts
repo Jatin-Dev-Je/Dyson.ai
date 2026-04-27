@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { handleProcessEvent }      from '@/jobs/process-event.job.js'
 import { handleGenerateEmbeddings } from '@/jobs/generate-embeddings.job.js'
 import { handleBuildEdges }         from '@/jobs/build-edges.job.js'
+import { handleBackfillSource }     from '@/jobs/backfill-source.job.js'
 import { DysonError }               from '@/shared/errors.js'
 import { env }                      from '@/config/env.js'
 
@@ -40,6 +41,15 @@ export default async function jobRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     verifyJobSecret(req)
     await handleBuildEdges(req.body, req.log)
+    return reply.status(204).send()
+  })
+
+  // POST /jobs/backfill-source
+  app.post('/backfill-source', {
+    schema: { tags: ['Jobs'], summary: 'Backfill historical events from a connected source' },
+  }, async (req, reply) => {
+    verifyJobSecret(req)
+    await handleBackfillSource(req.body, req.log)
     return reply.status(204).send()
   })
 }

@@ -3,7 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { SignupSchema, LoginSchema, RefreshSchema } from './auth.schema.js'
 import { signup, login, refresh, logout } from './auth.service.js'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
-import { DysonError } from '@/shared/errors.js'
+import { writeAudit } from '@/modules/audit/audit.service.js'
 
 export default async function authRoutes(app: FastifyInstance) {
 
@@ -23,6 +23,13 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     const { tokens, user } = await signup(app, input, meta)
+
+    void writeAudit({
+      tenantId:  user.tenantId,
+      actorId:   user.id,
+      action:    'auth.signup',
+      ipAddress: req.ip,
+    })
 
     return reply.status(201).send({
       data: { user, ...tokens },
@@ -45,6 +52,13 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     const { tokens, user } = await login(app, input, meta)
+
+    void writeAudit({
+      tenantId:  user.tenantId,
+      actorId:   user.id,
+      action:    'auth.login',
+      ipAddress: req.ip,
+    })
 
     return reply.send({ data: { user, ...tokens } })
   })
@@ -77,8 +91,16 @@ export default async function authRoutes(app: FastifyInstance) {
     },
     preHandler: [authMiddleware],
   }, async (req, reply) => {
-    const payload = req.user as { sub: string }
+    const payload = req.user as { sub: string; tid: string }
     await logout(payload.sub)
+
+    void writeAudit({
+      tenantId:  payload.tid,
+      actorId:   payload.sub,
+      action:    'auth.logout',
+      ipAddress: req.ip,
+    })
+
     return reply.status(204).send()
   })
 

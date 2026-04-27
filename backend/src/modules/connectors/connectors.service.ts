@@ -1,9 +1,14 @@
+import type { FastifyBaseLogger } from 'fastify'
+import { eq, and } from 'drizzle-orm'
 import { env } from '@/config/env.js'
 import { EventSource } from '@/shared/types/entities.js'
 import { DysonError, NotFoundError, ForbiddenError } from '@/shared/errors.js'
+import { db } from '@/infra/db/client.js'
+import { connectedSources } from '@/infra/db/schema/index.js'
+import { enqueue } from '@/infra/queue/queue.client.js'
 import {
   listConnectors, findConnector, upsertConnector,
-  disconnectConnector, markSyncComplete, markSyncError,
+  disconnectConnector,
 } from './connectors.repository.js'
 
 // ─── List ─────────────────────────────────────────────────────────────────
@@ -119,13 +124,50 @@ export async function handleGitHubCallback(installationId: number, state?: strin
 
 // ─── Disconnect ───────────────────────────────────────────────────────────
 
+// Look up a connector by primary id within a tenant — used by sync/delete routes
+async function findConnectorById(connectorId: string, tenantId: string) {
+  const [row] = await db
+    .select()
+    .from(connectedSources)
+    .where(and(
+      eq(connectedSources.id, connectorId),
+      eq(connectedSources.tenantId, tenantId),
+    ))
+    .limit(1)
+  return row ?? null
+}
+
 export async function removeConnector(
   id: string,
   tenantId: string,
   role: string
-) {
+): Promise<{ source: string }> {
   if (role !== 'admin') throw new ForbiddenError()
-  const conn = await findConnector(tenantId, id)
+  const conn = await findConnectorById(id, tenantId)
   if (!conn) throw new NotFoundError('Connector')
   await disconnectConnector(id, tenantId)
+  return { source: conn.source }
+}
+
+// ─── Sync (manual backfill trigger) ───────────────────────────────────────
+
+export async function triggerConnectorSync(
+  connectorId: string,
+  tenantId:    string,
+  logger:      FastifyBaseLogger
+): Promise<{ source: string; connectorId: string }> {
+  const conn = await findConnectorById(connectorId, tenantId)
+  if (!conn)            throw new NotFoundError('Connector')
+  if (!conn.isActive)   throw new DysonError('CONNECTOR_INACTIVE', 'Connector is not active', 409)
+
+  // Enqueue backfill job. The worker fetches a recent page of events from the
+  // source API, normalizes them, and pushes through the standard ingest path.
+  // Idempotent: existing events dedupe via externalId.
+  await enqueue('backfill-source', {
+    connectorId,
+    tenantId,
+    source: conn.source,
+  }, logger)
+
+  return { source: conn.source, connectorId }
 }
