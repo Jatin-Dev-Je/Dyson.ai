@@ -88,12 +88,12 @@ export async function buildApp() {
   await app.register(import('./modules/auth/auth.routes.js'),          { prefix: '/api/v1/auth' })
   await app.register(import('./modules/workspace/workspace.routes.js'), { prefix: '/api/v1/workspaces' })
   await app.register(import('./modules/users/users.routes.js'),         { prefix: '/api/v1/users' })
-  await app.register(import('./modules/connectors/connectors.routes.js'),{ prefix: '/api/v1/connectors' })
+  await app.register(import('./modules/connectors/connectors.routes.js'), { prefix: '/api/v1/connectors' })
+  await app.register(import('./modules/graph/graph.routes.js'),          { prefix: '/api/v1/graph' })
+  await app.register(import('./modules/decisions/decisions.routes.js'),  { prefix: '/api/v1/decisions' })
 
-  // Stub routes — replaced week by week
-  await app.register(import('./api/routes/v1/why.routes.js'),          { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/graph.routes.js'),        { prefix: '/api/v1' })
-  await app.register(import('./api/routes/v1/decisions.routes.js'),    { prefix: '/api/v1' })
+  // Stub — replaced in Week 5
+  await app.register(import('./api/routes/v1/why.routes.js'),           { prefix: '/api/v1' })
 
   // Webhooks
   await app.register(import('./api/routes/webhooks/slack.webhook.js'), { prefix: '/webhooks' })
