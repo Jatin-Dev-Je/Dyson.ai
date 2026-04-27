@@ -92,8 +92,7 @@ export async function buildApp() {
   await app.register(import('./modules/graph/graph.routes.js'),          { prefix: '/api/v1/graph' })
   await app.register(import('./modules/decisions/decisions.routes.js'),  { prefix: '/api/v1/decisions' })
 
-  // Stub — replaced in Week 5
-  await app.register(import('./api/routes/v1/why.routes.js'),           { prefix: '/api/v1' })
+  await app.register(import('./modules/why/why.routes.js'),             { prefix: '/api/v1/why' })
 
   // Webhooks
   await app.register(import('./api/routes/webhooks/slack.webhook.js'), { prefix: '/webhooks' })
