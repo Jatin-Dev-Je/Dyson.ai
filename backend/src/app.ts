@@ -99,6 +99,11 @@ export async function buildApp() {
   await app.register(import('./modules/audit/audit.routes.js'),             { prefix: '/api/v1/audit-log' })
   await app.register(import('./modules/agent/agent.routes.js'),             { prefix: '/api/v1/agent' })
 
+  // ── Model Context Protocol (MCP) ──────────────────────────────────────────
+  // Mounted at /mcp so Claude Desktop / Cursor / Continue / custom agents can
+  // connect via Streamable HTTP using their Dyson API key.
+  await app.register(import('./modules/agent-layer/mcp/transport.http.js'),  { prefix: '/mcp' })
+
   // Webhooks
   await app.register(import('./api/routes/webhooks/slack.webhook.js'), { prefix: '/webhooks' })
   await app.register(import('./api/routes/webhooks/github.webhook.js'),{ prefix: '/webhooks' })

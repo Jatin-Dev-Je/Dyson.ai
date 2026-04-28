@@ -1,4 +1,4 @@
-﻿import { pgTable, uuid, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core'
+﻿import { pgTable, uuid, text, timestamp, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core'
 import { tenants } from './tenants.schema.js'
 
 export const rawEvents = pgTable('raw_events', {
@@ -15,8 +15,9 @@ export const rawEvents = pgTable('raw_events', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   tenantIdx: index('raw_events_tenant_idx').on(table.tenantId),
-  // Deduplication: same external event never ingested twice per tenant
-  dedupeIdx: index('raw_events_dedupe_idx').on(table.tenantId, table.externalId, table.source),
+  // Deduplication: same external event never ingested twice per tenant.
+  // UNIQUE so onConflictDoNothing actually dedupes — required for idempotent ingestion (CLAUDE.md §4).
+  dedupeIdx: uniqueIndex('raw_events_dedupe_idx').on(table.tenantId, table.externalId, table.source),
   statusIdx: index('raw_events_status_idx').on(table.tenantId, table.status),
   occurredIdx: index('raw_events_occurred_idx').on(table.tenantId, table.occurredAt),
 }))

@@ -4,7 +4,8 @@ import { rawEvents } from '@/infra/db/schema/index.js'
 import type { NormalizedEvent } from './ingestion.types.js'
 import { IngestionStatus } from '@/shared/types/entities.js'
 
-// Insert a single event — idempotent via ON CONFLICT DO NOTHING
+// Insert a single event — idempotent via ON CONFLICT DO NOTHING on the unique dedupe index.
+// Returns null if the event was already ingested (duplicate webhook delivery, replay, backfill overlap).
 export async function insertRawEvent(tenantId: string, event: NormalizedEvent) {
   const [row] = await db
     .insert(rawEvents)
@@ -18,13 +19,15 @@ export async function insertRawEvent(tenantId: string, event: NormalizedEvent) {
       status:      IngestionStatus.Pending,
       occurredAt:  event.occurredAt,
     })
-    .onConflictDoNothing()  // Idempotent — duplicate externalId+source+tenantId is silently skipped
+    .onConflictDoNothing({
+      target: [rawEvents.tenantId, rawEvents.externalId, rawEvents.source],
+    })
     .returning({ id: rawEvents.id })
 
-  return row ?? null  // null means it was a duplicate — that's fine
+  return row ?? null
 }
 
-// Batch insert for historical backfill
+// Batch insert for historical backfill — same dedupe target as the single-row variant
 export async function batchInsertRawEvents(tenantId: string, events: NormalizedEvent[]) {
   if (events.length === 0) return []
 
@@ -42,7 +45,9 @@ export async function batchInsertRawEvents(tenantId: string, events: NormalizedE
         occurredAt:  e.occurredAt,
       }))
     )
-    .onConflictDoNothing()
+    .onConflictDoNothing({
+      target: [rawEvents.tenantId, rawEvents.externalId, rawEvents.source],
+    })
     .returning({ id: rawEvents.id })
 
   return rows
