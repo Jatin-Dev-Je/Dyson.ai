@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db } from '@/infra/db/client.js'
 import { apiKeys } from '@/infra/db/schema/index.js'
 import { NotFoundError } from '@/shared/errors.js'
+import { apiKeyCache } from '@/infra/cache.js'
 
 export const CreateApiKeySchema = z.object({
   name:   z.string().min(1).max(100).trim(),
@@ -31,7 +32,6 @@ export async function listApiKeys(tenantId: string) {
       lastUsedAt: apiKeys.lastUsedAt,
       revokedAt:  apiKeys.revokedAt,
       createdAt:  apiKeys.createdAt,
-      // Never return keyHash
     })
     .from(apiKeys)
     .where(and(eq(apiKeys.tenantId, tenantId), isNull(apiKeys.revokedAt)))
@@ -62,13 +62,20 @@ export async function createApiKey(
       createdAt: apiKeys.createdAt,
     })
 
-  // Return plaintext key ONCE — never stored, never recoverable
   if (!row) throw new Error('createApiKey insert returned no row')
   return { ...row, rawKey: raw }
 }
 
-// Admin-only at the route layer. Tenant scoping prevents cross-workspace revocation.
 export async function revokeApiKey(id: string, tenantId: string, _requesterId: string) {
+  // Invalidate cache immediately so the key stops working within milliseconds
+  const [existing] = await db
+    .select({ keyHash: apiKeys.keyHash })
+    .from(apiKeys)
+    .where(and(eq(apiKeys.id, id), eq(apiKeys.tenantId, tenantId)))
+    .limit(1)
+
+  if (existing) apiKeyCache.invalidate(existing.keyHash)
+
   const result = await db
     .update(apiKeys)
     .set({ revokedAt: new Date() })
@@ -82,9 +89,12 @@ export async function revokeApiKey(id: string, tenantId: string, _requesterId: s
   if (result.length === 0) throw new NotFoundError('API key')
 }
 
-// Used by agent middleware to validate incoming keys
+// Used by agent middleware — cached for 60s to avoid a DB round-trip on every
+// agent request. Revocation invalidates the cache entry immediately (above).
 export async function validateApiKey(rawKey: string): Promise<{ tenantId: string; scopes: string[] } | null> {
-  const hash = hashApiKey(rawKey)
+  const hash   = hashApiKey(rawKey)
+  const cached = apiKeyCache.get(hash)
+  if (cached) return cached
 
   const [row] = await db
     .select({ tenantId: apiKeys.tenantId, scopes: apiKeys.scopes })
@@ -94,8 +104,11 @@ export async function validateApiKey(rawKey: string): Promise<{ tenantId: string
 
   if (!row) return null
 
-  // Update lastUsedAt non-blocking
+  const result = { tenantId: row.tenantId, scopes: row.scopes ?? [] }
+  apiKeyCache.set(hash, result)
+
+  // Update lastUsedAt non-blocking — don't wait, don't fail the request
   void db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.keyHash, hash))
 
-  return { tenantId: row.tenantId, scopes: row.scopes ?? [] }
+  return result
 }
