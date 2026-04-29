@@ -23,6 +23,19 @@ export const RefreshSchema = z.object({
   refreshToken: z.string().min(1),
 })
 
-export type SignupInput  = z.infer<typeof SignupSchema>
-export type LoginInput   = z.infer<typeof LoginSchema>
-export type RefreshInput = z.infer<typeof RefreshSchema>
+export const AcceptInviteSchema = z.object({
+  token:    z.string().min(1),
+  name:     z.string().min(2).max(100).trim(),
+  password: z.string().min(8).max(128),
+})
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword:     z.string().min(8).max(128),
+})
+
+export type SignupInput         = z.infer<typeof SignupSchema>
+export type LoginInput          = z.infer<typeof LoginSchema>
+export type RefreshInput        = z.infer<typeof RefreshSchema>
+export type AcceptInviteInput   = z.infer<typeof AcceptInviteSchema>
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>

@@ -4,6 +4,7 @@ import { eq, and, desc, gt } from 'drizzle-orm'
 
 export type AuditAction =
   | 'auth.signup' | 'auth.login' | 'auth.logout' | 'auth.refresh'
+  | 'auth.accept_invite' | 'auth.change_password'
   | 'connector.connected' | 'connector.disconnected' | 'connector.synced'
   | 'why.query' | 'why.feedback'
   | 'decision.flagged'

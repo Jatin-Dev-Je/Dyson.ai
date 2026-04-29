@@ -1,6 +1,6 @@
 import { eq, and, gt, isNull } from 'drizzle-orm'
 import { db } from '@/infra/db/client.js'
-import { tenants, users, refreshTokens } from '@/infra/db/schema/index.js'
+import { tenants, users, refreshTokens, invitations } from '@/infra/db/schema/index.js'
 
 // ─── Tenant queries ───────────────────────────────────────────────────────
 
@@ -16,7 +16,6 @@ export async function createTenantAndAdmin(opts: {
   email:        string
   passwordHash: string
 }) {
-  // Single transaction — both succeed or both fail
   return await db.transaction(async tx => {
     const [tenant] = await tx
       .insert(tenants)
@@ -53,7 +52,7 @@ export async function findUserByEmail(email: string, tenantId: string) {
   return row ?? null
 }
 
-// Find user by email across ALL tenants (for login without knowing workspace)
+// Find user by email across ALL tenants (for login)
 export async function findUserByEmailGlobal(email: string) {
   const [row] = await db
     .select({
@@ -72,6 +71,7 @@ export async function findUserByEmailGlobal(email: string) {
   return row ?? null
 }
 
+// Includes passwordHash — only for internal auth operations (verify password, change password)
 export async function findUserById(id: string, tenantId: string) {
   const [row] = await db
     .select()
@@ -86,6 +86,62 @@ export async function updateUserLastSeen(userId: string) {
     .update(users)
     .set({ lastSeenAt: new Date() })
     .where(eq(users.id, userId))
+}
+
+export async function updateUserPassword(userId: string, tenantId: string, passwordHash: string) {
+  await db
+    .update(users)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
+}
+
+// ─── Invitation acceptance ────────────────────────────────────────────────
+
+// Creates the new user and marks the invitation accepted in a single transaction.
+// If the email already has an account in the workspace, returns the existing user
+// and still marks the invite accepted (idempotent re-accept is safe).
+export async function acceptInvitationAndCreateUser(opts: {
+  inviteId:     string
+  tenantId:     string
+  email:        string
+  name:         string
+  role:         'admin' | 'member' | 'viewer'
+  passwordHash: string
+}) {
+  return await db.transaction(async tx => {
+    // Check if user already exists (e.g., re-accepting a partially completed flow)
+    const [existing] = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.email, opts.email), eq(users.tenantId, opts.tenantId)))
+      .limit(1)
+
+    let user = existing
+
+    if (!user) {
+      const [created] = await tx
+        .insert(users)
+        .values({
+          tenantId:     opts.tenantId,
+          email:        opts.email,
+          name:         opts.name,
+          passwordHash: opts.passwordHash,
+          role:         opts.role,
+          isActive:     true,
+        })
+        .returning()
+
+      if (!created) throw new Error('Failed to create user from invitation')
+      user = created
+    }
+
+    await tx
+      .update(invitations)
+      .set({ status: 'accepted', acceptedAt: new Date() })
+      .where(eq(invitations.id, opts.inviteId))
+
+    return user
+  })
 }
 
 // ─── Refresh token queries ────────────────────────────────────────────────
@@ -103,6 +159,7 @@ export async function storeRefreshToken(opts: {
   return row
 }
 
+// tokenHash is an HMAC-SHA256 hex digest — deterministic, so we can use eq() lookup
 export async function findValidRefreshToken(tokenHash: string) {
   const [row] = await db
     .select()
@@ -125,7 +182,6 @@ export async function revokeRefreshToken(id: string) {
     .where(eq(refreshTokens.id, id))
 }
 
-// Revoke ALL tokens for a user (security event / logout all devices)
 export async function revokeAllUserTokens(userId: string) {
   await db
     .update(refreshTokens)

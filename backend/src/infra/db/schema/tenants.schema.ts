@@ -1,13 +1,13 @@
-﻿import {
+import {
   pgTable, uuid, text, timestamp, boolean, pgEnum, index, uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
-// â”€â”€â”€ Enums (enforced at DB level) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Enums (enforced at DB level) -------------------------------------------
 export const planEnum   = pgEnum('plan',          ['free', 'team', 'business', 'enterprise'])
 export const roleEnum   = pgEnum('role',          ['admin', 'member', 'viewer'])
 export const inviteEnum = pgEnum('invite_status', ['pending', 'accepted', 'expired', 'cancelled'])
 
-// â”€â”€â”€ Tenants (workspaces) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Tenants (workspaces) ----------------------------------------------------
 export const tenants = pgTable('tenants', {
   id:        uuid('id').primaryKey().defaultRandom(),
   name:      text('name').notNull(),
@@ -20,7 +20,7 @@ export const tenants = pgTable('tenants', {
   slugIdx: uniqueIndex('tenants_slug_idx').on(t.slug),
 }))
 
-// â”€â”€â”€ Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Users -------------------------------------------------------------------
 export const users = pgTable('users', {
   id:           uuid('id').primaryKey().defaultRandom(),
   tenantId:     uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
@@ -38,13 +38,13 @@ export const users = pgTable('users', {
   tenantIdx:      index('users_tenant_idx').on(t.tenantId),
 }))
 
-// â”€â”€â”€ Refresh tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Refresh tokens ----------------------------------------------------------
 // Stored so tokens can be revoked on logout or security events
 export const refreshTokens = pgTable('refresh_tokens', {
   id:        uuid('id').primaryKey().defaultRandom(),
   userId:    uuid('user_id').notNull().references(() => users.id,   { onDelete: 'cascade' }),
   tenantId:  uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  tokenHash: text('token_hash').notNull(),  // bcrypt hash â€” never store plaintext
+  tokenHash: text('token_hash').notNull(),  // HMAC-SHA256(rawToken, JWT_SECRET) -- deterministic for O(1) lookup
   userAgent: text('user_agent'),
   ipAddress: text('ip_address'),
   expiresAt: timestamp('expires_at').notNull(),
@@ -55,7 +55,7 @@ export const refreshTokens = pgTable('refresh_tokens', {
   tokenHashIdx: index('refresh_tokens_hash_idx').on(t.tokenHash),
 }))
 
-// â”€â”€â”€ Invitations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Invitations -------------------------------------------------------------
 export const invitations = pgTable('invitations', {
   id:         uuid('id').primaryKey().defaultRandom(),
   tenantId:   uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
@@ -72,7 +72,7 @@ export const invitations = pgTable('invitations', {
   tenantIdx: index('invitations_tenant_idx').on(t.tenantId),
 }))
 
-// â”€â”€â”€ Connected sources â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Connected sources -------------------------------------------------------
 export const connectedSources = pgTable('connected_sources', {
   id:           uuid('id').primaryKey().defaultRandom(),
   tenantId:     uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
@@ -87,4 +87,3 @@ export const connectedSources = pgTable('connected_sources', {
 }, t => ({
   tenantSourceIdx: uniqueIndex('sources_tenant_source_idx').on(t.tenantId, t.source),
 }))
-

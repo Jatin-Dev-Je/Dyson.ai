@@ -1,7 +1,22 @@
 import type { FastifyInstance } from 'fastify'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { SignupSchema, LoginSchema, RefreshSchema } from './auth.schema.js'
-import { signup, login, refresh, logout } from './auth.service.js'
+import {
+  SignupSchema,
+  LoginSchema,
+  RefreshSchema,
+  AcceptInviteSchema,
+  ChangePasswordSchema,
+} from './auth.schema.js'
+import {
+  signup,
+  login,
+  refresh,
+  logout,
+  getMe,
+  getInviteInfo,
+  acceptInvite,
+  changePassword,
+} from './auth.service.js'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
 import { writeAudit } from '@/modules/audit/audit.service.js'
 
@@ -31,9 +46,7 @@ export default async function authRoutes(app: FastifyInstance) {
       ipAddress: req.ip,
     })
 
-    return reply.status(201).send({
-      data: { user, ...tokens },
-    })
+    return reply.status(201).send({ data: { user, ...tokens } })
   })
 
   // ── POST /api/v1/auth/login ──────────────────────────────────────────────
@@ -108,18 +121,86 @@ export default async function authRoutes(app: FastifyInstance) {
   app.get('/me', {
     schema: {
       tags: ['Auth'],
-      summary: 'Get the currently authenticated user',
+      summary: 'Get the currently authenticated user profile',
       security: [{ bearerAuth: [] }],
     },
     preHandler: [authMiddleware],
   }, async (req, reply) => {
-    const payload = req.user as { sub: string; tid: string; role: string }
-    return reply.send({
-      data: {
-        userId:   payload.sub,
-        tenantId: payload.tid,
-        role:     payload.role,
+    const payload = req.user as { sub: string; tid: string }
+    const user    = await getMe(payload.sub, payload.tid)
+    return reply.send({ data: user })
+  })
+
+  // ── GET /api/v1/auth/invite/:token ───────────────────────────────────────
+  // Public — validates the invitation token and returns metadata for the
+  // accept-invite form (prefills email, shows workspace name)
+  app.get('/invite/:token', {
+    config: { rateLimit: { max: 30, timeWindow: '15 minutes' } },
+    schema: {
+      tags: ['Auth'],
+      summary: 'Validate an invitation token and return invite metadata',
+      params: {
+        type: 'object',
+        properties: { token: { type: 'string' } },
+        required: ['token'],
       },
+    },
+  }, async (req, reply) => {
+    const { token } = req.params as { token: string }
+    const info      = await getInviteInfo(token)
+    return reply.send({ data: info })
+  })
+
+  // ── POST /api/v1/auth/accept-invite ─────────────────────────────────────
+  // Public — invited user sets their name + password and receives tokens
+  app.post('/accept-invite', {
+    config: { rateLimit: { max: 10, timeWindow: '15 minutes' } },
+    schema: {
+      tags: ['Auth'],
+      summary: 'Accept a workspace invitation and create your account',
+      body: zodToJsonSchema(AcceptInviteSchema),
+    },
+  }, async (req, reply) => {
+    const input = AcceptInviteSchema.parse(req.body)
+    const meta  = {
+      userAgent: req.headers['user-agent'] ?? null,
+      ipAddress: req.ip,
+    }
+
+    const { tokens, user } = await acceptInvite(app, input, meta)
+
+    void writeAudit({
+      tenantId:  user.tenantId,
+      actorId:   user.id,
+      action:    'auth.accept_invite',
+      ipAddress: req.ip,
     })
+
+    return reply.status(201).send({ data: { user, ...tokens } })
+  })
+
+  // ── POST /api/v1/auth/change-password ───────────────────────────────────
+  app.post('/change-password', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Change the authenticated user\'s password (revokes all sessions)',
+      security: [{ bearerAuth: [] }],
+      body: zodToJsonSchema(ChangePasswordSchema),
+    },
+    preHandler: [authMiddleware],
+  }, async (req, reply) => {
+    const payload = req.user as { sub: string; tid: string }
+    const input   = ChangePasswordSchema.parse(req.body)
+
+    await changePassword(payload.sub, payload.tid, input)
+
+    void writeAudit({
+      tenantId:  payload.tid,
+      actorId:   payload.sub,
+      action:    'auth.change_password',
+      ipAddress: req.ip,
+    })
+
+    return reply.status(204).send()
   })
 }
