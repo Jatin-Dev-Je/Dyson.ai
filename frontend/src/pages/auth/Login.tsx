@@ -1,22 +1,25 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Github, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { AuthLayout } from './AuthLayout'
-import { auth } from '@/lib/auth'
+import { authApi, ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 export default function Login() {
-  const navigate  = useNavigate()
-  const location  = useLocation()
-  const from      = (location.state as { from?: string } | null)?.from ?? '/app'
+  const navigate = useNavigate()
+  const location = useLocation()
+  const from     = (location.state as { from?: string } | null)?.from ?? '/app'
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [showPw,   setShowPw]   = useState(false)
-  const [remember, setRemember] = useState(false)
   const [loading,  setLoading]  = useState(false)
-  const [errors,   setErrors]   = useState<{ email: string; password: string }>({ email: '', password: '' })
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [errors,   setErrors]   = useState<{ email: string; password: string }>({
+    email:    '',
+    password: '',
+  })
 
   function validate() {
     const emailErr    = !email.includes('@') ? 'Enter a valid email address' : ''
@@ -29,9 +32,23 @@ export default function Login() {
     e.preventDefault()
     if (!validate()) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 900))
-    auth.login(email)
-    navigate(from, { replace: true })
+    setApiError(null)
+    try {
+      await authApi.login(email, password)
+      navigate(from, { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setApiError(
+          err.code === 'INVALID_CREDENTIALS'
+            ? 'Incorrect email or password.'
+            : err.message
+        )
+      } else {
+        setApiError('Something went wrong — please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -39,21 +56,16 @@ export default function Login() {
       title="Welcome back"
       subtitle="Sign in to your Dyson workspace."
     >
-      {/* GitHub OAuth */}
-      <button
-        type="button"
-        className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-white/[0.10] bg-white/[0.04] text-[13.5px] font-medium text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15] hover:text-white active:scale-[0.99] transition-all duration-150 mb-5"
-      >
-        <Github className="w-4 h-4" />
-        Continue with GitHub
-      </button>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="flex-1 h-px bg-white/[0.06]" />
-        <span className="text-[11px] text-white/25 font-mono">or with email</span>
-        <div className="flex-1 h-px bg-white/[0.06]" />
-      </div>
+      {/* API error */}
+      {apiError && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-[12.5px] text-red-400"
+        >
+          {apiError}
+        </motion.div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit} noValidate className="space-y-3.5">
@@ -124,27 +136,6 @@ export default function Login() {
             <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
               className="text-[11px] text-red-400 mt-1.5">{errors.password}</motion.p>
           )}
-        </div>
-
-        {/* Remember me */}
-        <div className="flex items-center gap-2.5 pt-0.5">
-          <button
-            type="button"
-            onClick={() => setRemember(v => !v)}
-            className={cn(
-              'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all duration-150',
-              remember
-                ? 'bg-primary border-primary'
-                : 'border-white/[0.15] bg-white/[0.03] hover:border-primary/50'
-            )}
-          >
-            {remember && (
-              <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </button>
-          <span className="text-[12px] text-white/35">Remember me for 30 days</span>
         </div>
 
         {/* Submit */}

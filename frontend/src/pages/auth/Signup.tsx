@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Github, ArrowRight, Check } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react'
 import { AuthLayout } from './AuthLayout'
-import { auth } from '@/lib/auth'
+import { authApi, ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Field = { value: string; error: string; touched: boolean }
@@ -16,66 +16,66 @@ const perks = [
 ]
 
 function PasswordStrength({ password }: { password: string }) {
-  const checks = [
-    password.length >= 8,
-    /[A-Z]/.test(password),
-    /[0-9]/.test(password),
-  ]
-  const score = checks.filter(Boolean).length
-  const label = ['', 'Weak', 'Good', 'Strong'][score] ?? ''
-  const color = ['', 'bg-red-500', 'bg-yellow-500', 'bg-green-500'][score] ?? ''
-
+  const checks = [password.length >= 8, /[A-Z]/.test(password), /[0-9]/.test(password)]
+  const score  = checks.filter(Boolean).length
+  const label  = ['', 'Weak', 'Good', 'Strong'][score] ?? ''
+  const color  = ['', 'bg-red-500', 'bg-yellow-500', 'bg-green-500'][score] ?? ''
   if (!password) return null
-
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      className="mt-2"
-    >
+    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-2">
       <div className="flex gap-1 mb-1">
         {[0, 1, 2].map(i => (
-          <div
-            key={i}
-            className={cn(
-              'flex-1 h-0.5 rounded-full transition-all duration-300',
-              i < score ? color : 'bg-white/10'
-            )}
-          />
+          <div key={i} className={cn('flex-1 h-0.5 rounded-full transition-all duration-300', i < score ? color : 'bg-white/10')} />
         ))}
       </div>
-      <p className={cn(
-        'text-[10px] font-mono transition-colors',
-        score === 1 ? 'text-red-400' : score === 2 ? 'text-yellow-400' : 'text-green-400'
-      )}>
+      <p className={cn('text-[10px] font-mono', score === 1 ? 'text-red-400' : score === 2 ? 'text-yellow-400' : 'text-green-400')}>
         {label} password
       </p>
     </motion.div>
   )
 }
 
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
+}
+
 export default function Signup() {
   const navigate = useNavigate()
-  const [name,     setName]     = useState(field())
-  const [email,    setEmail]    = useState(field())
-  const [password, setPassword] = useState(field())
-  const [showPw,   setShowPw]   = useState(false)
-  const [loading,  setLoading]  = useState(false)
-  const [agreed,   setAgreed]   = useState(false)
+  const [name,          setName]          = useState(field())
+  const [email,         setEmail]         = useState(field())
+  const [password,      setPassword]      = useState(field())
+  const [workspaceName, setWorkspaceName] = useState(field())
+  const [workspaceSlug, setWorkspaceSlug] = useState(field())
+  const [showPw,        setShowPw]        = useState(false)
+  const [loading,       setLoading]       = useState(false)
+  const [agreed,        setAgreed]        = useState(false)
+  const [apiError,      setApiError]      = useState<string | null>(null)
+
+  function handleWorkspaceName(value: string) {
+    setWorkspaceName({ value, error: '', touched: true })
+    // Auto-fill slug only if user hasn't manually edited it
+    if (!workspaceSlug.touched) {
+      setWorkspaceSlug({ value: toSlug(value), error: '', touched: false })
+    }
+  }
 
   function validate() {
     let ok = true
     if (!name.value.trim()) {
-      setName(v => ({ ...v, error: 'Name is required', touched: true }))
-      ok = false
+      setName(v => ({ ...v, error: 'Name is required', touched: true })); ok = false
     }
     if (!email.value.includes('@')) {
-      setEmail(v => ({ ...v, error: 'Enter a valid work email', touched: true }))
-      ok = false
+      setEmail(v => ({ ...v, error: 'Enter a valid work email', touched: true })); ok = false
     }
     if (password.value.length < 8) {
-      setPassword(v => ({ ...v, error: 'At least 8 characters', touched: true }))
-      ok = false
+      setPassword(v => ({ ...v, error: 'At least 8 characters', touched: true })); ok = false
+    }
+    if (!workspaceName.value.trim()) {
+      setWorkspaceName(v => ({ ...v, error: 'Workspace name is required', touched: true })); ok = false
+    }
+    const slug = workspaceSlug.value
+    if (!slug || !/^[a-z0-9-]{2,50}$/.test(slug)) {
+      setWorkspaceSlug(v => ({ ...v, error: 'Lowercase letters, numbers, and hyphens only', touched: true })); ok = false
     }
     if (!agreed) ok = false
     return ok
@@ -85,9 +85,29 @@ export default function Signup() {
     e.preventDefault()
     if (!validate()) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1200))
-    auth.login(email.value)
-    navigate('/app', { replace: true })
+    setApiError(null)
+    try {
+      await authApi.signup({
+        name:          name.value.trim(),
+        email:         email.value.trim(),
+        password:      password.value,
+        workspaceName: workspaceName.value.trim(),
+        workspaceSlug: workspaceSlug.value.trim(),
+      })
+      navigate('/app', { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.code === 'SLUG_TAKEN') {
+          setWorkspaceSlug(v => ({ ...v, error: 'This workspace URL is already taken', touched: true }))
+        } else {
+          setApiError(err.message)
+        }
+      } else {
+        setApiError('Something went wrong — please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -95,43 +115,30 @@ export default function Signup() {
       title="Create your account"
       subtitle="Set up Dyson for your engineering team in minutes."
     >
-      {/* GitHub OAuth — primary CTA for engineers */}
-      <button
-        type="button"
-        className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-white/[0.10] bg-white/[0.04] text-[13.5px] font-medium text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15] hover:text-white active:scale-[0.99] transition-all duration-150 mb-5"
-      >
-        <Github className="w-4 h-4" />
-        Continue with GitHub
-      </button>
+      {/* API error */}
+      {apiError && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-[12.5px] text-red-400"
+        >
+          {apiError}
+        </motion.div>
+      )}
 
-      {/* Divider */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="flex-1 h-px bg-white/[0.06]" />
-        <span className="text-[11px] text-white/25 font-mono">or with email</span>
-        <div className="flex-1 h-px bg-white/[0.06]" />
-      </div>
-
-      {/* Form */}
       <form onSubmit={handleSubmit} noValidate className="space-y-3.5">
 
         {/* Name */}
         <div>
-          <label className="block text-[12px] font-medium text-white/50 mb-1.5">
-            Full name
-          </label>
+          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Full name</label>
           <input
-            type="text"
-            autoComplete="name"
-            placeholder="Alex Kumar"
+            type="text" autoComplete="name" placeholder="Alex Kumar"
             value={name.value}
             onChange={e => setName({ value: e.target.value, error: '', touched: true })}
             className={cn(
               'w-full h-10 px-3.5 rounded-xl border bg-white/[0.03] text-[13.5px] text-white placeholder:text-white/20',
-              'outline-none transition-all duration-150',
-              'focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
-              name.error && name.touched
-                ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15'
-                : 'border-white/[0.08] focus:border-primary/50'
+              'outline-none transition-all duration-150 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
+              name.error && name.touched ? 'border-red-500/50' : 'border-white/[0.08] focus:border-primary/50'
             )}
           />
           {name.error && name.touched && (
@@ -142,22 +149,15 @@ export default function Signup() {
 
         {/* Email */}
         <div>
-          <label className="block text-[12px] font-medium text-white/50 mb-1.5">
-            Work email
-          </label>
+          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Work email</label>
           <input
-            type="email"
-            autoComplete="email"
-            placeholder="alex@company.com"
+            type="email" autoComplete="email" placeholder="alex@company.com"
             value={email.value}
             onChange={e => setEmail({ value: e.target.value, error: '', touched: true })}
             className={cn(
               'w-full h-10 px-3.5 rounded-xl border bg-white/[0.03] text-[13.5px] text-white placeholder:text-white/20',
-              'outline-none transition-all duration-150',
-              'focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
-              email.error && email.touched
-                ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15'
-                : 'border-white/[0.08] focus:border-primary/50'
+              'outline-none transition-all duration-150 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
+              email.error && email.touched ? 'border-red-500/50' : 'border-white/[0.08] focus:border-primary/50'
             )}
           />
           {email.error && email.touched && (
@@ -168,30 +168,20 @@ export default function Signup() {
 
         {/* Password */}
         <div>
-          <label className="block text-[12px] font-medium text-white/50 mb-1.5">
-            Password
-          </label>
+          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Password</label>
           <div className="relative">
             <input
-              type={showPw ? 'text' : 'password'}
-              autoComplete="new-password"
-              placeholder="Minimum 8 characters"
+              type={showPw ? 'text' : 'password'} autoComplete="new-password" placeholder="Minimum 8 characters"
               value={password.value}
               onChange={e => setPassword({ value: e.target.value, error: '', touched: true })}
               className={cn(
                 'w-full h-10 px-3.5 pr-10 rounded-xl border bg-white/[0.03] text-[13.5px] text-white placeholder:text-white/20',
-                'outline-none transition-all duration-150',
-                'focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
-                password.error && password.touched
-                  ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15'
-                  : 'border-white/[0.08] focus:border-primary/50'
+                'outline-none transition-all duration-150 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
+                password.error && password.touched ? 'border-red-500/50' : 'border-white/[0.08] focus:border-primary/50'
               )}
             />
-            <button
-              type="button"
-              onClick={() => setShowPw(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors"
-            >
+            <button type="button" onClick={() => setShowPw(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors">
               {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
@@ -202,18 +192,54 @@ export default function Signup() {
           )}
         </div>
 
+        {/* Workspace name */}
+        <div>
+          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Workspace name</label>
+          <input
+            type="text" placeholder="Acme Engineering"
+            value={workspaceName.value}
+            onChange={e => handleWorkspaceName(e.target.value)}
+            className={cn(
+              'w-full h-10 px-3.5 rounded-xl border bg-white/[0.03] text-[13.5px] text-white placeholder:text-white/20',
+              'outline-none transition-all duration-150 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
+              workspaceName.error && workspaceName.touched ? 'border-red-500/50' : 'border-white/[0.08] focus:border-primary/50'
+            )}
+          />
+          {workspaceName.error && workspaceName.touched && (
+            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="text-[11px] text-red-400 mt-1.5">{workspaceName.error}</motion.p>
+          )}
+        </div>
+
+        {/* Workspace slug */}
+        <div>
+          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Workspace URL</label>
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-white/30 flex-shrink-0">dyson.app/</span>
+            <input
+              type="text" placeholder="acme-engineering"
+              value={workspaceSlug.value}
+              onChange={e => setWorkspaceSlug({ value: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''), error: '', touched: true })}
+              className={cn(
+                'flex-1 h-10 px-3.5 rounded-xl border bg-white/[0.03] text-[13.5px] text-white placeholder:text-white/20',
+                'outline-none transition-all duration-150 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/25',
+                workspaceSlug.error && workspaceSlug.touched ? 'border-red-500/50' : 'border-white/[0.08] focus:border-primary/50'
+              )}
+            />
+          </div>
+          {workspaceSlug.error && workspaceSlug.touched && (
+            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="text-[11px] text-red-400 mt-1.5">{workspaceSlug.error}</motion.p>
+          )}
+        </div>
+
         {/* Terms */}
         <div className="flex items-start gap-2.5 pt-1">
-          <button
-            type="button"
-            onClick={() => setAgreed(v => !v)}
+          <button type="button" onClick={() => setAgreed(v => !v)}
             className={cn(
               'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-150',
-              agreed
-                ? 'bg-primary border-primary'
-                : 'border-white/[0.15] bg-white/[0.03] hover:border-primary/50'
-            )}
-          >
+              agreed ? 'bg-primary border-primary' : 'border-white/[0.15] bg-white/[0.03] hover:border-primary/50'
+            )}>
             {agreed && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
           </button>
           <p className="text-[12px] text-white/35 leading-[1.5]">
@@ -257,7 +283,6 @@ export default function Signup() {
         ))}
       </div>
 
-      {/* Login link */}
       <p className="text-[12.5px] text-white/30 mt-7 text-center">
         Already have an account?{' '}
         <Link to="/login" className="text-white/60 hover:text-white underline underline-offset-2 transition-colors">

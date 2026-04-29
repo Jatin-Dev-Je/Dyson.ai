@@ -3,6 +3,7 @@ import { ArrowRight, Zap, List, TrendingUp, Clock, MessageSquare, GitPullRequest
 import { Link } from 'react-router-dom'
 import { SourcePill } from '@/components/shared/SourcePill'
 import { ConfidenceBadge } from '@/components/shared/ConfidenceBadge'
+import { authApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const stats = [
@@ -55,12 +56,17 @@ function StatCard({ label, value, delta, icon: Icon, color }: typeof stats[numbe
 }
 
 export default function Dashboard() {
+  const user      = authApi.getUser()
+  const firstName = user?.name.split(' ')[0] ?? 'there'
+  const hour      = new Date().getHours()
+  const greeting  = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
   return (
     <div className="px-8 py-7 max-w-[1080px] mx-auto">
 
       {/* Header */}
       <div className="mb-7">
-        <h1 className="text-[22px] font-semibold text-text-1 mb-1">Good morning, Jatin</h1>
+        <h1 className="text-[22px] font-semibold text-text-1 mb-1">{greeting}, {firstName}</h1>
         <p className="text-[13px] text-text-3">Here's what's happening in your context graph.</p>
       </div>
 
