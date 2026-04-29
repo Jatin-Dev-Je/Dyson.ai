@@ -13,8 +13,20 @@ export default async function whyRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authMiddleware)
 
   // ── POST /api/v1/why ─────────────────────────────────────────────────────
+  // CLAUDE.md §8: 10 req/min per USER on the WHY Engine (not just per tenant).
+  // keyGenerator scopes the limit to the authenticated user's JWT sub so
+  // one power-user cannot exhaust the tenant's shared bucket.
   app.post('/', {
-    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    config: {
+      rateLimit: {
+        max:          10,
+        timeWindow:   '1 minute',
+        keyGenerator: (req) => {
+          const payload = req.user as { sub?: string; tid?: string } | undefined
+          return `why:${payload?.tid ?? 'anon'}:${payload?.sub ?? req.ip}`
+        },
+      },
+    },
     schema: {
       tags: ['WHY Engine'],
       summary: 'Ask a WHY question — returns a cited causal timeline',
