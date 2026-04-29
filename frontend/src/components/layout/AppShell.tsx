@@ -8,7 +8,7 @@ import {
   Keyboard, Circle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { auth } from '@/lib/auth'
+import { authApi, tokens } from '@/lib/api'
 import { DysonMark } from '@/components/shared/DysonMark'
 import { NotificationPanel } from './NotificationPanel'
 import { CommandPalette } from './CommandPalette'
@@ -135,6 +135,19 @@ function UserMenu() {
   const navigate        = useNavigate()
   useOutsideClick(ref, () => setOpen(false))
 
+  const user      = authApi.getUser()
+  const name      = user?.name ?? 'Account'
+  const email     = user?.email ?? ''
+  const initials  = name.split(' ').map((w: string) => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+
+  function handleSignOut() {
+    // Clear tokens synchronously so ProtectedRoute redirects immediately,
+    // then fire the backend logout in the background (revokes the refresh token)
+    tokens.clearAll()
+    navigate('/login', { replace: true })
+    void authApi.logout()
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -142,18 +155,18 @@ function UserMenu() {
         className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.04] transition-colors group"
       >
         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/60 to-violet-500/60 flex items-center justify-center flex-shrink-0 text-[9px] font-bold text-white">
-          J
+          {initials || 'U'}
         </div>
         <div className="flex-1 text-left min-w-0">
-          <p className="text-[12.5px] font-medium text-text-2 leading-none truncate group-hover:text-text-1 transition-colors">Jatin Dev</p>
+          <p className="text-[12.5px] font-medium text-text-2 leading-none truncate group-hover:text-text-1 transition-colors">{name}</p>
         </div>
         <ChevronDown className={cn('w-3.5 h-3.5 text-text-4 transition-transform duration-200', open && 'rotate-180')} />
       </button>
 
       <FloatingMenu open={open} className="bottom-full left-2 right-2 mb-1">
         <div className="px-3 py-2.5 border-b border-[#282828] mb-1">
-          <p className="text-[13px] font-semibold text-text-1">Jatin Dev</p>
-          <p className="text-[11px] text-text-3 mt-0.5 truncate">sainijatin3078@gmail.com</p>
+          <p className="text-[13px] font-semibold text-text-1">{name}</p>
+          {email && <p className="text-[11px] text-text-3 mt-0.5 truncate">{email}</p>}
         </div>
         <MenuItem icon={User}         label="Profile"        shortcut="⌘P" onClick={() => { navigate('/app/settings/profile'); setOpen(false) }} />
         <MenuItem icon={CreditCard}   label="Billing"                      onClick={() => { navigate('/app/settings/billing'); setOpen(false) }} />
@@ -163,9 +176,7 @@ function UserMenu() {
         <MenuItem icon={ExternalLink} label="What's new"     />
         <MenuItem icon={Keyboard}     label="Keyboard shortcuts" shortcut="?" />
         <MenuSep />
-        <MenuItem icon={LogOut} label="Sign out" danger
-          onClick={() => { auth.logout(); navigate('/login', { replace: true }) }}
-        />
+        <MenuItem icon={LogOut} label="Sign out" danger onClick={handleSignOut} />
       </FloatingMenu>
     </div>
   )
