@@ -55,5 +55,13 @@ export function createProxyHandlers(opts: {
     async getNode(input) {
       return call('GET', `/api/v1/graph/nodes/${encodeURIComponent(input.id)}`) as Promise<ReturnType<DysonMcpHandlers['getNode']> extends Promise<infer T> ? T : never>
     },
+
+    async writeEvent(input) {
+      return call('POST', '/api/v1/agent/events', input) as Promise<ReturnType<DysonMcpHandlers['writeEvent']> extends Promise<infer T> ? T : never>
+    },
+
+    async workspaceOverview() {
+      return call('GET', '/api/v1/agent/workspace-overview') as Promise<ReturnType<DysonMcpHandlers['workspaceOverview']> extends Promise<infer T> ? T : never>
+    },
   }
 }

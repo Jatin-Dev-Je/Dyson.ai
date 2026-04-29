@@ -2,11 +2,14 @@ import type { FastifyBaseLogger } from 'fastify'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@/infra/db/client.js'
 import { contextNodes } from '@/infra/db/schema/index.js'
-import { askWhy }                 from '@/modules/why/why.service.js'
-import { search }                 from '@/modules/search/search.service.js'
+import { askWhy }                    from '@/modules/why/why.service.js'
+import { search }                    from '@/modules/search/search.service.js'
 import { getDecisions, getDecision } from '@/modules/decisions/decisions.service.js'
-import { NotFoundError }          from '@/shared/errors.js'
-import type { DysonMcpHandlers }  from './server.js'
+import { insertRawEvent }            from '@/modules/ingestion/ingestion.repository.js'
+import { enqueue }                   from '@/infra/queue/queue.client.js'
+import { EventSource, EntityType }   from '@/shared/types/entities.js'
+import { NotFoundError }             from '@/shared/errors.js'
+import type { DysonMcpHandlers }     from './server.js'
 
 /**
  * MCP handlers for the in-process server. Each call must already have a
@@ -116,6 +119,46 @@ export function createDirectHandlers(
         sourceUrl:  row.sourceUrl ?? null,
         ...(row.occurredAt && { occurredAt: new Date(row.occurredAt).toISOString() }),
         ...(row.isDecision && { isDecision: true }),
+      }
+    },
+
+    async writeEvent(input) {
+      const event = {
+        externalId:  `agent_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        source:      EventSource.Agent,
+        entityType:  (input.type as EntityType | undefined) ?? EntityType.Message,
+        content:     input.content,
+        metadata:    { title: input.title, ...(input.metadata ?? {}) },
+        occurredAt:  new Date(),
+        authorEmail: null,
+        url:         input.url ?? null,
+      }
+      const stored = await insertRawEvent(tenantId, event)
+      if (stored) {
+        await enqueue('process-event', {
+          eventId: stored.id,
+          tenantId,
+          event:   { ...event, occurredAt: event.occurredAt.toISOString() },
+        }, logger)
+      }
+      return { id: stored?.id ?? null, queued: !!stored }
+    },
+
+    async workspaceOverview() {
+      const [dec, qry] = await Promise.all([
+        getDecisions(tenantId, { limit: 5, minConfidence: 0.60 }),
+        search(tenantId, { q: '', type: 'query', limit: 5 }).catch(() => ({ results: [] })),
+      ])
+      return {
+        recentDecisions: dec.decisions.map(d => ({
+          id:         d.id,
+          title:      d.title,
+          source:     d.source,
+          ...(d.decisionConfidence !== null && d.decisionConfidence !== undefined && { confidence: d.decisionConfidence }),
+          ...(d.occurredAt && { occurredAt: new Date(d.occurredAt).toISOString() }),
+        })),
+        recentQueries: qry.results.map(q => ({ id: q.id, title: q.title })),
+        note: 'Use ask_why to get a cited causal timeline. Use write_event to contribute context from agent actions.',
       }
     },
   }

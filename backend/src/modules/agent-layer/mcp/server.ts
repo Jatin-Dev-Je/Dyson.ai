@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
+import { EntityType } from '@/shared/types/entities.js'
 
 /**
  * MCP server for Dyson — exposes the WHY Engine, search, and decisions to any
@@ -47,6 +48,16 @@ export interface DysonMcpHandlers {
   getNode(input: { id: string }): Promise<{
     id: string; title: string; summary: string; source: string; sourceUrl: string | null
     occurredAt?: string; isDecision?: boolean
+  }>
+
+  writeEvent(input: { type?: string; title: string; content: string; url?: string; metadata?: Record<string, unknown> }): Promise<{
+    id: string | null; queued: boolean
+  }>
+
+  workspaceOverview(): Promise<{
+    recentDecisions: Array<{ id: string; title: string; source: string; confidence?: number | null; occurredAt?: string }>
+    recentQueries:   Array<{ id: string; title: string }>
+    note: string
   }>
 }
 
@@ -232,6 +243,145 @@ export function createDysonMcpServer(handlers: DysonMcpHandlers): McpServer {
         contents: [{ uri: uri.href, mimeType: 'text/markdown', text }],
       }
     }
+  )
+
+  // ── Tool: write_event — agents contribute to institutional memory ────────
+  server.registerTool(
+    'write_event',
+    {
+      title:       'Write event',
+      description:
+        'Write a context event back to the Dyson graph. Use this when you (as an AI agent) take an ' +
+        'action or make a decision so that it becomes part of the team\'s institutional memory. ' +
+        'Requires a write-scoped API key. Examples: "I refactored auth.ts because we deprecated ' +
+        'sessions" or "I added retry logic after observing timeout errors in the logs."',
+      inputSchema: {
+        title:   z.string().min(1).max(300).describe('One-line title for this event.'),
+        content: z.string().min(1).max(8000).describe('Full explanation — what happened and why. The more context, the better causal links the graph can draw.'),
+        type:    z.nativeEnum(EntityType).optional().describe('Entity type (default: message).'),
+        url:     z.string().url().optional().describe('Source URL (PR, issue, file) if applicable.'),
+      },
+    },
+    async (input) => {
+      const args: Parameters<typeof handlers.writeEvent>[0] = {
+        title:   input.title,
+        content: input.content,
+      }
+      if (input.type !== undefined) args.type = input.type
+      if (input.url  !== undefined) args.url  = input.url
+
+      const r = await handlers.writeEvent(args)
+      const text = r.queued
+        ? `✓ Event written to context graph (id: ${r.id ?? 'pending'}). It will be processed and linked to related events within seconds.`
+        : `Event was a duplicate — already in the graph.`
+      return { content: [{ type: 'text', text }], structuredContent: r as unknown as Record<string, unknown> }
+    }
+  )
+
+  // ── Tool: workspace_overview ─────────────────────────────────────────────
+  server.registerTool(
+    'workspace_overview',
+    {
+      title:       'Workspace overview',
+      description:
+        'Get a digest of recent workspace activity — latest decisions and recent WHY queries. ' +
+        'Use at the start of an agentic session to understand current context before taking actions.',
+      inputSchema: {},
+    },
+    async () => {
+      const r    = await handlers.workspaceOverview()
+      const dec  = r.recentDecisions.map((d, i) =>
+        `${i + 1}. ${d.title} (${d.source}${d.confidence !== null && d.confidence !== undefined ? `, conf ${(d.confidence * 100).toFixed(0)}%` : ''})`
+      ).join('\n')
+      const qry  = r.recentQueries.map((q, i) => `${i + 1}. ${q.title}`).join('\n')
+      const text = [
+        '**Recent decisions:**',
+        dec || '_None yet_',
+        '',
+        '**Recent WHY queries:**',
+        qry || '_None yet_',
+        '',
+        `_${r.note}_`,
+      ].join('\n')
+      return { content: [{ type: 'text', text }], structuredContent: r as unknown as Record<string, unknown> }
+    }
+  )
+
+  // ── Prompts — role-specific system context for different agent types ─────
+  server.prompt(
+    'coding-agent',
+    'System context for a coding AI agent operating inside this workspace',
+    {},
+    () => ({
+      messages: [{
+        role: 'user',
+        content: {
+          type: 'text',
+          text: [
+            'You are a coding assistant with access to the Dyson context graph for this engineering workspace.',
+            '',
+            'Before suggesting any architectural change, refactor, or code removal:',
+            '1. Call workspace_overview to understand recent decisions',
+            '2. Call ask_why with context about the area you\'re changing',
+            '3. If Dyson returns a relevant past decision, surface it to the user before proceeding',
+            '4. After making a change, call write_event to record what you did and why',
+            '',
+            'You should NEVER re-introduce patterns that Dyson indicates were explicitly deprecated.',
+            'When in doubt, ask_why first.',
+          ].join('\n'),
+        },
+      }],
+    })
+  )
+
+  server.prompt(
+    'sre-agent',
+    'System context for an SRE or on-call AI agent',
+    {},
+    () => ({
+      messages: [{
+        role: 'user',
+        content: {
+          type: 'text',
+          text: [
+            'You are an SRE assistant with access to the Dyson context graph.',
+            '',
+            'During an incident:',
+            '1. Call ask_why with "What caused [symptom]?" to find causal history',
+            '2. Call ask_why with "Were there similar past incidents?" for patterns',
+            '3. Call search_context to find relevant decisions about the affected service',
+            '4. After resolving, call write_event to record the resolution and root cause',
+            '',
+            'Always cite your sources. Confidence below 72% means Dyson doesn\'t have enough context — say so explicitly.',
+          ].join('\n'),
+        },
+      }],
+    })
+  )
+
+  server.prompt(
+    'onboarding-agent',
+    'System context for an onboarding or new team member AI assistant',
+    {},
+    () => ({
+      messages: [{
+        role: 'user',
+        content: {
+          type: 'text',
+          text: [
+            'You are helping a new team member understand their codebase and team decisions.',
+            '',
+            'Helpful patterns:',
+            '1. workspace_overview — start with what has been decided recently',
+            '2. ask_why about the services or modules the new member is working on',
+            '3. recent_decisions — what are the active architectural constraints?',
+            '',
+            'Be honest about confidence. If Dyson returns cannotAnswer: true, say "I don\'t have enough context yet — try asking your team lead."',
+            'Never invent history that isn\'t in the context graph.',
+          ].join('\n'),
+        },
+      }],
+    })
   )
 
   return server
