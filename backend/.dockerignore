@@ -1,8 +1,41 @@
+# Dependencies — reinstalled in builder stage
 node_modules
+
+# Local build output — compiled fresh in builder
 dist
+
+# Secrets — never in Docker context
 .env
 .env.*
+!.env.example
 gcp-service-account.json
-*.log
-coverage
+*.pem
+*.key
+
+# Tests — never ship to production image
+tests/
+vitest.config.ts
+.vitest-cache/
+coverage/
+.nyc_output/
+
+# Dev tooling
+eslint.config.js
+commitlint.config.js
+.husky/
+.prettierrc*
+
+# Git + Editor + OS
 .git
+.gitignore
+.gitattributes
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

@@ -70,8 +70,10 @@ export async function buildApp() {
   // ── Health checks ──────────────────────────────────────────────────────────
   // /health — liveness (always fast, no DB)
   app.get('/health', { schema: { hide: true } }, async () => ({
-    status: 'ok',
-    ts:     new Date().toISOString(),
+    status:  'ok',
+    ts:      new Date().toISOString(),
+    version: process.env['npm_package_version'] ?? 'unknown',
+    env:     env.NODE_ENV,
   }))
 
   // /health/ready — readiness (checks DB connection)
