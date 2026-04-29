@@ -3,6 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { UpdateMeSchema, InviteUserSchema, ListUsersQuerySchema } from './users.schema.js'
 import { getMe, updateMe, listUsers, inviteUser, removeUser } from './users.service.js'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
+import { writeAudit } from '@/modules/audit/audit.service.js'
 
 export default async function usersRoutes(app: FastifyInstance) {
 
@@ -66,6 +67,16 @@ export default async function usersRoutes(app: FastifyInstance) {
     const { sub, tid, role } = req.user as { sub: string; tid: string; role: string }
     const input              = InviteUserSchema.parse(req.body)
     const invite             = await inviteUser(tid, sub, role, input)
+
+    void writeAudit({
+      tenantId:     tid,
+      actorId:      sub,
+      action:       'member.invited',
+      resourceType: 'user',
+      metadata:     { email: input.email, role: input.role },
+      ipAddress:    req.ip,
+    })
+
     return reply.status(201).send({ data: invite })
   })
 
@@ -81,6 +92,16 @@ export default async function usersRoutes(app: FastifyInstance) {
     const { sub, tid, role } = req.user as { sub: string; tid: string; role: string }
     const { id }             = req.params as { id: string }
     await removeUser(sub, role, id, tid)
+
+    void writeAudit({
+      tenantId:     tid,
+      actorId:      sub,
+      action:       'member.removed',
+      resourceType: 'user',
+      resourceId:   id,
+      ipAddress:    req.ip,
+    })
+
     return reply.status(204).send()
   })
 }

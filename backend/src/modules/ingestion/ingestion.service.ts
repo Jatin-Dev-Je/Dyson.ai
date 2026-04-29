@@ -1,4 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify'
+import { eq, and, sql } from 'drizzle-orm'
+import { db } from '@/infra/db/client.js'
+import { connectedSources } from '@/infra/db/schema/index.js'
 import { insertRawEvent } from './ingestion.repository.js'
 import { normalizeSlackEvent } from './connectors/slack/slack.handler.js'
 import { normalizeGitHubEvent } from './connectors/github/github.handler.js'
@@ -9,27 +12,22 @@ import { EventSource } from '@/shared/types/entities.js'
 // ─── Shared: store + enqueue ──────────────────────────────────────────────
 
 async function storeAndEnqueue(
-  tenantId: string,
+  tenantId:   string,
   normalized: ReturnType<typeof normalizeSlackEvent>,
-  logger: FastifyBaseLogger
+  logger:     FastifyBaseLogger
 ) {
   if (!normalized) return null
 
   const stored = await insertRawEvent(tenantId, normalized)
   if (!stored) {
-    // Duplicate event — idempotent no-op
     logger.debug({ externalId: normalized.externalId }, 'Duplicate event skipped')
     return null
   }
 
-  // Enqueue processing job — decoupled from ingestion
   await enqueue('process-event', {
     eventId:  stored.id,
     tenantId,
-    event: {
-      ...normalized,
-      occurredAt: normalized.occurredAt.toISOString(),
-    },
+    event: { ...normalized, occurredAt: normalized.occurredAt.toISOString() },
   }, logger)
 
   return stored
@@ -43,21 +41,14 @@ export async function ingestSlackEvent(
   logger:   FastifyBaseLogger
 ) {
   const normalized = normalizeSlackEvent(payload, payload.team_id)
-
   if (!normalized) {
     logger.debug({ eventType: payload.event?.type }, 'Slack event not actionable — skipped')
     return null
   }
-
   const stored = await storeAndEnqueue(tenantId, normalized, logger)
-
   if (stored) {
-    logger.info(
-      { tenantId, rawEventId: stored.id, source: EventSource.Slack },
-      'Slack event ingested and queued for processing'
-    )
+    logger.info({ tenantId, rawEventId: stored.id, source: EventSource.Slack }, 'Slack event ingested')
   }
-
   return stored
 }
 
@@ -71,52 +62,35 @@ export async function ingestGitHubEvent(
   logger:     FastifyBaseLogger
 ) {
   const normalized = normalizeGitHubEvent(eventType, payload, deliveryId)
-
   if (!normalized) {
     logger.debug({ eventType }, 'GitHub event not actionable — skipped')
     return null
   }
-
   const stored = await storeAndEnqueue(tenantId, normalized, logger)
-
   if (stored) {
-    logger.info(
-      { tenantId, rawEventId: stored.id, source: EventSource.GitHub, eventType },
-      'GitHub event ingested and queued for processing'
-    )
+    logger.info({ tenantId, rawEventId: stored.id, source: EventSource.GitHub, eventType }, 'GitHub event ingested')
   }
-
   return stored
 }
 
-// ─── Tenant resolution from webhook headers ───────────────────────────────
-// Webhooks don't carry a JWT — resolve tenantId from stored connector metadata
+// ─── Tenant resolution ────────────────────────────────────────────────────
+// Webhooks don't carry a JWT — resolve tenantId from stored connector metadata.
 
 export async function resolveTenantFromSlackTeam(teamId: string): Promise<string | null> {
-  const { db }               = await import('@/infra/db/client.js')
-  const { connectedSources } = await import('@/infra/db/schema/index.js')
-  const { sql }              = await import('drizzle-orm')
-
   const [row] = await db
     .select({ tenantId: connectedSources.tenantId })
     .from(connectedSources)
-    .where(sql`
-      ${connectedSources.metadata}::jsonb ->> 'teamId' = ${teamId}
-      AND ${connectedSources.source} = ${EventSource.Slack}
-      AND ${connectedSources.isActive} = true
-    `)
+    .where(and(
+      eq(connectedSources.source, EventSource.Slack),
+      eq(connectedSources.isActive, true),
+      sql`${connectedSources.metadata}::jsonb ->> 'teamId' = ${teamId}`,
+    ))
     .limit(1)
 
   return row?.tenantId ?? null
 }
 
-// Resolve tenant from the GitHub installation ID stored in connector metadata.
-// Every GitHub App webhook includes installation.id — use that for accurate routing.
 export async function resolveTenantFromGitHubInstallation(installationId: number): Promise<string | null> {
-  const { db }               = await import('@/infra/db/client.js')
-  const { connectedSources } = await import('@/infra/db/schema/index.js')
-  const { sql, and, eq }     = await import('drizzle-orm')
-
   const [row] = await db
     .select({ tenantId: connectedSources.tenantId })
     .from(connectedSources)
@@ -128,9 +102,4 @@ export async function resolveTenantFromGitHubInstallation(installationId: number
     .limit(1)
 
   return row?.tenantId ?? null
-}
-
-// Kept for compatibility — prefer resolveTenantFromGitHubInstallation when available
-export async function resolveTenantFromGitHubRepo(_repoFullName: string): Promise<string | null> {
-  return null  // Deprecated — use resolveTenantFromGitHubInstallation
 }
