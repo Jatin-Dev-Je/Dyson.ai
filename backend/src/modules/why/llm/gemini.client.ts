@@ -1,6 +1,7 @@
 import { env } from '@/config/env.js'
 import type { FastifyBaseLogger } from 'fastify'
 import { SYSTEM_PROMPT, buildPrompt } from './prompt-builder.js'
+import { parseGeminiWhyResponse } from './response-validator.js'
 import type { SourceNodeSummary, GeminiWhyResponse } from '../why.types.js'
 
 const MAX_RETRIES   = 2
@@ -71,7 +72,8 @@ export async function callGemini(
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text
       if (!text) throw new Error('Gemini returned empty response')
 
-      const parsed = JSON.parse(text) as GeminiWhyResponse
+      const parsed = parseGeminiWhyResponse(JSON.parse(text))
+      if (!parsed) throw new Error('Gemini response failed schema validation')
       return parsed
 
     } catch (err) {

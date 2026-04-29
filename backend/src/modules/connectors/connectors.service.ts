@@ -7,7 +7,7 @@ import { db } from '@/infra/db/client.js'
 import { connectedSources } from '@/infra/db/schema/index.js'
 import { enqueue } from '@/infra/queue/queue.client.js'
 import {
-  listConnectors, findConnector, upsertConnector,
+  listConnectors, upsertConnector,
   disconnectConnector,
 } from './connectors.repository.js'
 

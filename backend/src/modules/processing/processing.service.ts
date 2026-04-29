@@ -7,7 +7,7 @@ import {
 } from './processing.repository.js'
 import { markEventComplete, markEventFailed } from '../ingestion/ingestion.repository.js'
 import { enqueue } from '@/infra/queue/queue.client.js'
-import { RelationshipType, EntityType, EventSource } from '@/shared/types/entities.js'
+import { RelationshipType, EventSource } from '@/shared/types/entities.js'
 import type { NormalizedEvent } from '../ingestion/ingestion.types.js'
 
 // ─── Process a single raw event into a context node ──────────────────────

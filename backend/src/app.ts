@@ -84,6 +84,47 @@ export async function buildApp() {
     }
   })
 
+  // /metrics — lightweight operational metrics for Cloud Monitoring / alerting.
+  // Per CLAUDE.md §15: cannot_answer rate, ingestion lag, and error rates.
+  // Not authenticated — mount behind a VPC or load-balancer firewall in production.
+  app.get('/metrics', { schema: { hide: true } }, async () => {
+    const [whyStats] = await db.execute<{
+      total: string; cannot_answer: string; avg_confidence: string; avg_latency_ms: string
+    }>(sql`
+      SELECT
+        COUNT(*)::text                                                      AS total,
+        COUNT(*) FILTER (WHERE cannot_answer = true)::text                 AS cannot_answer,
+        ROUND(AVG(confidence)::numeric, 4)::text                           AS avg_confidence,
+        ROUND(AVG(latency_ms)::numeric, 0)::text                           AS avg_latency_ms
+      FROM why_queries
+      WHERE created_at > NOW() - INTERVAL '24 hours'
+    `).catch(() => [null])
+
+    const [ingestionStats] = await db.execute<{
+      pending: string; failed: string
+    }>(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'pending')::text   AS pending,
+        COUNT(*) FILTER (WHERE status = 'failed')::text    AS failed
+      FROM raw_events
+      WHERE created_at > NOW() - INTERVAL '1 hour'
+    `).catch(() => [null])
+
+    return {
+      ts: new Date().toISOString(),
+      why: {
+        total_24h:          Number(whyStats?.total ?? 0),
+        cannot_answer_24h:  Number(whyStats?.cannot_answer ?? 0),
+        avg_confidence_24h: Number(whyStats?.avg_confidence ?? 0),
+        avg_latency_ms_24h: Number(whyStats?.avg_latency_ms ?? 0),
+      },
+      ingestion: {
+        pending_1h: Number(ingestionStats?.pending ?? 0),
+        failed_1h:  Number(ingestionStats?.failed ?? 0),
+      },
+    }
+  })
+
   // ── Module routes ──────────────────────────────────────────────────────────
   await app.register(import('./modules/auth/auth.routes.js'),          { prefix: '/api/v1/auth' })
   await app.register(import('./modules/workspace/workspace.routes.js'), { prefix: '/api/v1/workspaces' })

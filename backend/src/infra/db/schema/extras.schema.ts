@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, timestamp, jsonb, index, uniqueIndex, boolean,
+  pgTable, uuid, text, timestamp, jsonb, index, uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { tenants, users } from './tenants.schema.js'
 

@@ -53,7 +53,8 @@ export async function upsertConnector(opts: {
       },
     })
     .returning()
-  return row!
+  if (!row) throw new Error('upsertConnector returned no row')
+  return row
 }
 
 export async function markSyncComplete(id: string) {

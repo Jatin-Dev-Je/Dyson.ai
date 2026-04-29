@@ -13,7 +13,7 @@ export async function vectorSearch(
   logger:    FastifyBaseLogger
 ): Promise<SourceNodeSummary[]> {
   // Generate embedding for the question
-  const embedding = await generateEmbedding(question, logger)
+  const embedding = await generateEmbedding(question, logger, 'search_query')
 
   if (!embedding) {
     logger.warn({ tenantId }, 'No embedding generated for question — vector search skipped')
@@ -33,6 +33,7 @@ export async function vectorSearch(
       cn.title,
       cn.summary,
       cn.source_url     AS "sourceUrl",
+      cn.metadata,
       cn.occurred_at    AS "occurredAt",
       cn.is_decision    AS "isDecision",
       ROUND((1 - (ne.embedding <=> ${embeddingStr}::vector))::numeric, 4)::float AS similarity
@@ -50,6 +51,7 @@ export async function vectorSearch(
     title:      string
     summary:    string
     sourceUrl:  string | null
+    metadata:   Record<string, unknown> | null
     occurredAt: Date
     isDecision: boolean
     similarity: number
@@ -67,8 +69,10 @@ export async function vectorSearch(
     title:       r.title,
     summary:     r.summary,
     sourceUrl:   r.sourceUrl,
+    metadata:    r.metadata ?? {},
     occurredAt:  r.occurredAt,
     isDecision:  r.isDecision,
     similarity:  r.similarity,
+    retrieval:   'vector',
   }))
 }

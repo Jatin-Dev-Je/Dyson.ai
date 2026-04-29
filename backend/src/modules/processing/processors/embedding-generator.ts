@@ -7,6 +7,8 @@ const MAX_CHARS        = 2048   // ~512 tokens — Cohere's practical limit per 
 const MAX_RETRIES      = 3
 const RETRY_DELAY_MS   = 1000
 
+type EmbeddingInputType = 'search_document' | 'search_query'
+
 function truncateForEmbedding(text: string): string {
   if (text.length <= MAX_CHARS) return text
   return text.slice(0, MAX_CHARS - 3) + '…'
@@ -18,7 +20,8 @@ async function sleep(ms: number) {
 
 export async function generateEmbedding(
   text: string,
-  logger: FastifyBaseLogger
+  logger: FastifyBaseLogger,
+  inputType: EmbeddingInputType = 'search_document'
 ): Promise<number[] | null> {
   if (!env.COHERE_API_KEY) {
     logger.debug('Cohere API key not configured — skipping embedding generation')
@@ -38,7 +41,7 @@ export async function generateEmbedding(
         body: JSON.stringify({
           texts:      [input],
           model:      MODEL,
-          input_type: 'search_document',  // Optimises for document retrieval
+          input_type: inputType,
         }),
       })
 

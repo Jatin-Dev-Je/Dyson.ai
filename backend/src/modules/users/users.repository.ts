@@ -82,7 +82,8 @@ export async function createInvitation(opts: {
     .insert(invitations)
     .values({ ...opts, token, expiresAt })
     .returning()
-  return invite!
+  if (!invite) throw new Error('createInvitation returned no row')
+  return invite
 }
 
 export async function findInvitationByToken(token: string) {

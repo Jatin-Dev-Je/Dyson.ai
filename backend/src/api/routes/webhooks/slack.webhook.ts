@@ -17,7 +17,7 @@ async function getOrFetchBotUserId(): Promise<string | null> {
 }
 
 // Resolve the installation metadata (stores botUserId per workspace)
-async function getBotUserIdForTeam(tenantId: string, teamId: string): Promise<string | null> {
+async function getBotUserIdForTeam(tenantId: string, _teamId: string): Promise<string | null> {
   const [connector] = await db
     .select({ metadata: connectedSources.metadata })
     .from(connectedSources)

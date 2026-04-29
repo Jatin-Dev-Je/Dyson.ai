@@ -63,7 +63,8 @@ export async function createApiKey(
     })
 
   // Return plaintext key ONCE — never stored, never recoverable
-  return { ...row!, rawKey: raw }
+  if (!row) throw new Error('createApiKey insert returned no row')
+  return { ...row, rawKey: raw }
 }
 
 // Admin-only at the route layer. Tenant scoping prevents cross-workspace revocation.

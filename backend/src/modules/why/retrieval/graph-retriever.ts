@@ -49,6 +49,7 @@ export async function graphExpand(
       title:       contextNodes.title,
       summary:     contextNodes.summary,
       sourceUrl:   contextNodes.sourceUrl,
+      metadata:    contextNodes.metadata,
       occurredAt:  contextNodes.occurredAt,
       isDecision:  contextNodes.isDecision,
     })
@@ -62,6 +63,8 @@ export async function graphExpand(
   // (lower than direct vector matches, but above noise floor)
   return nodes.map(n => ({
     ...n,
+    metadata: n.metadata as Record<string, unknown> | null ?? {},
     similarity: 0.60,
+    retrieval: 'graph' as const,
   }))
 }

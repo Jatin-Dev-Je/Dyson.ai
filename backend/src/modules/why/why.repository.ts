@@ -2,7 +2,8 @@ import { eq, and, desc, gt } from 'drizzle-orm'
 import { createHash } from 'crypto'
 import { db } from '@/infra/db/client.js'
 import { whyQueries } from '@/infra/db/schema/index.js'
-import type { WhyEngineResult, Citation, SourceNodeSummary } from './why.types.js'
+import { DysonError } from '@/shared/errors.js'
+import type { WhyEngineResult } from './why.types.js'
 
 export function hashQuestion(question: string): string {
   return createHash('sha256').update(question.toLowerCase().trim()).digest('hex')
@@ -32,7 +33,10 @@ export async function saveQuery(opts: {
       latencyMs:     opts.latencyMs,
     })
     .returning()
-  return row!
+  if (!row) {
+    throw new DysonError('QUERY_SAVE_FAILED', 'Failed to save WHY query')
+  }
+  return row
 }
 
 export async function listQueryHistory(tenantId: string, userId: string, opts: {

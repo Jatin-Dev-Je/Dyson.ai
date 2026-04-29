@@ -31,6 +31,7 @@ export type SlackEvent = {
 // GitHub webhook payload shape (subset)
 export type GitHubEvent = {
   action?:       string
+  installation?: { id: number }  // present on all GitHub App events
   pull_request?: {
     id:          number
     number:      number

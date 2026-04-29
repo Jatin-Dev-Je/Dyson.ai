@@ -1,4 +1,3 @@
-import { createHash } from 'crypto'
 import { z } from 'zod'
 import { eq, and, desc } from 'drizzle-orm'
 import type { FastifyBaseLogger } from 'fastify'

@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import { postThreadedReply } from './slack-bot.client.js'
+import { postMessage } from './slack-bot.client.js'
 import { askWhy } from '@/modules/why/why.service.js'
 import { CONFIDENCE_THRESHOLD } from '@/config/constants.js'
 import type { SlackBlock } from './slack-bot.client.js'
@@ -107,9 +107,9 @@ export async function handleBotMention(opts: {
     ? `Dyson couldn't answer with confidence (${(result.confidence * 100).toFixed(0)}%). Here are the relevant events.`
     : result.answer?.slice(0, 150) ?? 'Dyson answered your question.'
 
-  await postThreadedReply({
+  await postMessage({
     channel,
-    threadTs,
+    threadTs,       // reply in the original thread
     text:   fallbackText,
     blocks: buildReplyBlocks(result),
   })
@@ -207,10 +207,10 @@ export async function handleIncidentChannelCreated(opts: {
     elements: [{ type: 'mrkdwn', text: `<https://app.dyson.ai/app/why|Ask more questions on Dyson> · Confidence: ${answered.map(r => `${(r.confidence * 100).toFixed(0)}%`).join(', ') || 'N/A'}` }],
   })
 
-  await postThreadedReply({
-    channel:  channelId,
-    threadTs: '0',   // top-level message
-    text:     `Dyson post-mortem starter for ${topic}`,
+  // Top-level post to the incident channel — no threadTs
+  await postMessage({
+    channel: channelId,
+    text:    `Dyson post-mortem starter for ${topic}`,
     blocks,
   })
 }

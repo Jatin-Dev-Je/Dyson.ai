@@ -1,4 +1,5 @@
 import { env } from '@/config/env.js'
+import { withRetry, isTransientError } from '@/infra/retry.js'
 
 const SLACK_API = 'https://slack.com/api'
 
@@ -12,36 +13,49 @@ async function slackPost<T>(method: string, body: Record<string, unknown>): Prom
   const token = env.SLACK_BOT_TOKEN
   if (!token) throw new Error('SLACK_BOT_TOKEN not configured')
 
-  const res = await fetch(`${SLACK_API}/${method}`, {
-    method:  'POST',
-    headers: {
-      Authorization:  `Bearer ${token}`,
-      'Content-Type': 'application/json; charset=utf-8',
-    },
-    body: JSON.stringify(body),
-  })
+  return withRetry(async () => {
+    const res = await fetch(`${SLACK_API}/${method}`, {
+      method:  'POST',
+      headers: {
+        Authorization:  `Bearer ${token}`,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify(body),
+    })
 
-  if (!res.ok) throw new Error(`Slack API ${method} HTTP ${res.status}`)
+    if (!res.ok) throw new Error(`Slack API ${method} HTTP ${res.status}`)
 
-  const data = await res.json() as { ok: boolean; error?: string } & T
-  if (!data.ok) throw new Error(`Slack API ${method} error: ${data.error}`)
+    const data = await res.json() as { ok: boolean; error?: string } & T
+    if (!data.ok) throw new Error(`Slack API ${method} error: ${data.error}`)
 
-  return data
+    return data
+  }, { shouldRetry: isTransientError })
 }
 
-/** Post a threaded reply with Block Kit blocks */
+/** Post a message. If threadTs is provided, replies in-thread. Otherwise posts top-level. */
+export async function postMessage(opts: {
+  channel:   string
+  threadTs?: string     // omit for top-level channel posts
+  text:      string     // fallback text for notifications
+  blocks:    SlackBlock[]
+}) {
+  const body: Record<string, unknown> = {
+    channel: opts.channel,
+    text:    opts.text,
+    blocks:  opts.blocks,
+  }
+  if (opts.threadTs) body['thread_ts'] = opts.threadTs
+  return slackPost('chat.postMessage', body)
+}
+
+/** @deprecated Use postMessage */
 export async function postThreadedReply(opts: {
   channel:   string
   threadTs:  string
-  text:      string          // fallback text for notifications
+  text:      string
   blocks:    SlackBlock[]
 }) {
-  return slackPost('chat.postMessage', {
-    channel:   opts.channel,
-    thread_ts: opts.threadTs,
-    text:      opts.text,
-    blocks:    opts.blocks,
-  })
+  return postMessage(opts)
 }
 
 /** Join a channel so the bot can post (public channels) */

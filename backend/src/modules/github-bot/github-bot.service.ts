@@ -38,7 +38,7 @@ function buildComment(opts: {
   const decisionLines = decisions
     .slice(0, 4)
     .map(d => {
-      const conf = d.decisionConfidence != null ? ` · conf ${(d.decisionConfidence * 100).toFixed(0)}%` : ''
+      const conf = d.decisionConfidence !== null && d.decisionConfidence !== undefined ? ` · conf ${(d.decisionConfidence * 100).toFixed(0)}%` : ''
       const link = d.sourceUrl ? `[↗](${d.sourceUrl})` : ''
       return `**${d.title}**${conf} ${link}\n> ${d.summary.slice(0, 180)}${d.summary.length > 180 ? '…' : ''}`
     })

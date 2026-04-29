@@ -1,16 +1,16 @@
 export type Citation = {
-  claim:         string   // The specific claim this citation supports
-  sourceNodeId:  string   // The node that supports the claim
+  claim:         string
+  sourceNodeId:  string
   sourceUrl:     string | null
-  confidence:    number   // How confident we are this node supports this claim
+  confidence:    number
 }
 
 export type WhyEngineResult = {
   queryId:      string
   question:     string
-  answer:       string | null         // null when cannotAnswer = true
+  answer:       string | null
   citations:    Citation[]
-  sourceNodes:  SourceNodeSummary[]   // All nodes used (shown as timeline)
+  sourceNodes:  SourceNodeSummary[]
   confidence:   number
   cannotAnswer: boolean
   latencyMs:    number
@@ -23,19 +23,19 @@ export type SourceNodeSummary = {
   title:       string
   summary:     string
   sourceUrl:   string | null
+  metadata?:   Record<string, unknown>
   occurredAt:  Date
-  similarity:  number   // Vector similarity score (0-1)
+  similarity:  number
   isDecision:  boolean
+  retrieval?:   'vector' | 'lexical' | 'graph'
 }
 
-// Shape returned by Gemini in structured mode
 export type GeminiWhyResponse = {
   answer:       string
   citations:    Array<{
     claim:           string
-    sourceNodeIndex: number   // Index into the sourceNodes array we sent
+    sourceNodeIndex: number
     confidence:      number
   }>
   cannotAnswer: boolean
-  reasoning:    string  // Internal CoT — not shown to user
 }

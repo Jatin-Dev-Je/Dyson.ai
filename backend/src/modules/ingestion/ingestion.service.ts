@@ -110,18 +110,27 @@ export async function resolveTenantFromSlackTeam(teamId: string): Promise<string
   return row?.tenantId ?? null
 }
 
-export async function resolveTenantFromGitHubRepo(_repoFullName: string): Promise<string | null> {
+// Resolve tenant from the GitHub installation ID stored in connector metadata.
+// Every GitHub App webhook includes installation.id — use that for accurate routing.
+export async function resolveTenantFromGitHubInstallation(installationId: number): Promise<string | null> {
   const { db }               = await import('@/infra/db/client.js')
   const { connectedSources } = await import('@/infra/db/schema/index.js')
-  const { eq }               = await import('drizzle-orm')
+  const { sql, and, eq }     = await import('drizzle-orm')
 
-  // In Week 4 we'll store a repo→tenantId mapping during installation
-  // For now, return the first active GitHub connector's tenant
   const [row] = await db
     .select({ tenantId: connectedSources.tenantId })
     .from(connectedSources)
-    .where(eq(connectedSources.source, EventSource.GitHub))
+    .where(and(
+      eq(connectedSources.source, EventSource.GitHub),
+      eq(connectedSources.isActive, true),
+      sql`${connectedSources.metadata}::jsonb ->> 'installationId' = ${String(installationId)}`,
+    ))
     .limit(1)
 
   return row?.tenantId ?? null
+}
+
+// Kept for compatibility — prefer resolveTenantFromGitHubInstallation when available
+export async function resolveTenantFromGitHubRepo(_repoFullName: string): Promise<string | null> {
+  return null  // Deprecated — use resolveTenantFromGitHubInstallation
 }

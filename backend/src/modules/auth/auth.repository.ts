@@ -99,7 +99,8 @@ export async function storeRefreshToken(opts: {
   expiresAt: Date
 }) {
   const [row] = await db.insert(refreshTokens).values(opts).returning()
-  return row!
+  if (!row) throw new Error('storeRefreshToken returned no row')
+  return row
 }
 
 export async function findValidRefreshToken(tokenHash: string) {

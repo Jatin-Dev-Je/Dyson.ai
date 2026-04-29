@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
   listNodes, getNodeById, getTimeline,
-  getEdgesForNode, getConnectedNodes, flagEdge,
+  getConnectedNodes, flagEdge,
   type NodeFilters,
 } from './graph.repository.js'
 import { NotFoundError } from '@/shared/errors.js'

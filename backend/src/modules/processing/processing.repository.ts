@@ -37,7 +37,8 @@ export async function upsertContextNode(node: InsertNode) {
       },
     })
     .returning()
-  return row!
+  if (!row) throw new Error('upsertContextNode returned no row — constraint violation')
+  return row
 }
 
 export async function findNodeByExternalId(tenantId: string, externalId: string, source: string) {
