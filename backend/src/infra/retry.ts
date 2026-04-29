@@ -17,7 +17,7 @@ export async function withRetry<T>(
   opts: RetryOptions = {}
 ): Promise<T> {
   const {
-    attempts   = 3,
+    attempts    = 3,
     baseDelayMs = 300,
     maxDelayMs  = 10_000,
     shouldRetry = () => true,
@@ -48,11 +48,10 @@ export function isTransientError(err: unknown): boolean {
       msg.includes('econnreset') ||
       msg.includes('etimedout') ||
       msg.includes('socket hang up') ||
-      msg.includes('http 429') ||
-      msg.includes('http 500') ||
-      msg.includes('http 502') ||
-      msg.includes('http 503') ||
-      msg.includes('http 504')
+      // Match HTTP 429 and 5xx regardless of surrounding text format
+      // e.g. "http 429", "failed: 429", "status 500", "HTTP/1.1 503"
+      /\b429\b/.test(msg) ||
+      /\b50[0-9]\b/.test(msg)
     )
   }
   return false
