@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { Camera, Check } from 'lucide-react'
+import { Camera, Check, Loader2 } from 'lucide-react'
+import { authApi, usersApi, ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   return (
@@ -23,23 +25,75 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Input({ defaultValue, placeholder, type = 'text' }: { defaultValue?: string; placeholder?: string; type?: string }) {
+function InputField({
+  value, onChange, placeholder, type = 'text', readOnly = false,
+}: {
+  value: string; onChange?: (v: string) => void; placeholder?: string; type?: string; readOnly?: boolean
+}) {
   return (
     <input
       type={type}
-      defaultValue={defaultValue}
+      value={value}
+      readOnly={readOnly}
+      onChange={e => onChange?.(e.target.value)}
       placeholder={placeholder}
-      className="w-full h-9 px-3.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 outline-none focus:border-primary/50 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/10 transition-all"
+      className={cn(
+        'w-full h-9 px-3.5 rounded-xl border bg-white/[0.03] text-[13px] text-white placeholder:text-white/20',
+        'outline-none transition-all',
+        readOnly
+          ? 'border-white/[0.04] text-white/40 cursor-default'
+          : 'border-white/[0.08] focus:border-primary/50 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/10'
+      )}
     />
   )
 }
 
 export default function Profile() {
-  const [saved, setSaved] = useState(false)
+  const user     = authApi.getUser()
+  const initials = (user?.name ?? 'U').split(' ').map((w: string) => w[0] ?? '').join('').slice(0, 2).toUpperCase()
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const [name,        setName]        = useState(user?.name ?? '')
+  const [saving,      setSaving]      = useState(false)
+
+  // Change password state
+  const [currentPw,  setCurrentPw]   = useState('')
+  const [newPw,      setNewPw]       = useState('')
+  const [confirmPw,  setConfirmPw]   = useState('')
+  const [pwSaving,   setPwSaving]    = useState(false)
+  const [pwError,    setPwError]     = useState<string | null>(null)
+
+  async function handleSaveProfile() {
+    if (!name.trim()) return
+    setSaving(true)
+    try {
+      await usersApi.updateMe({ name: name.trim() })
+      toast.success('Profile updated')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to save — please try again')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleChangePassword() {
+    setPwError(null)
+    if (newPw !== confirmPw) { setPwError('New passwords do not match'); return }
+    if (newPw.length < 8)    { setPwError('Password must be at least 8 characters'); return }
+
+    setPwSaving(true)
+    try {
+      await authApi.changePassword(currentPw, newPw)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+      toast.success('Password changed — you have been signed out of other devices')
+    } catch (err) {
+      setPwError(err instanceof ApiError
+        ? (err.code === 'INVALID_CREDENTIALS' ? 'Current password is incorrect' : err.message)
+        : 'Failed to change password')
+    } finally {
+      setPwSaving(false)
+    }
   }
 
   return (
@@ -53,7 +107,7 @@ export default function Profile() {
         <div className="flex items-center gap-5">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/40 to-violet-500/40 border border-primary/20 flex items-center justify-center">
-              <span className="text-[22px] font-bold text-primary">J</span>
+              <span className="text-[22px] font-bold text-primary">{initials}</span>
             </div>
             <button className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#131320] border border-white/[0.10] flex items-center justify-center hover:bg-white/[0.07] transition-colors">
               <Camera className="w-3 h-3 text-white/50" />
@@ -70,17 +124,60 @@ export default function Profile() {
 
       <Section title="Personal information">
         <div className="space-y-4">
-          <Field label="Full name"><Input defaultValue="Jatin Dev" /></Field>
-          <Field label="Email"><Input defaultValue="sainijatin3078@gmail.com" type="email" /></Field>
-          <Field label="Role"><Input defaultValue="Founder" /></Field>
+          <Field label="Full name">
+            <InputField value={name} onChange={setName} placeholder="Your name" />
+          </Field>
+          <Field label="Email">
+            <InputField value={user?.email ?? ''} readOnly />
+          </Field>
+          <Field label="Role">
+            <InputField value={user?.role ?? ''} readOnly />
+          </Field>
+        </div>
+        <div className="flex justify-end pt-5">
+          <button
+            onClick={handleSaveProfile}
+            disabled={saving || !name.trim() || name.trim() === user?.name}
+            className={cn(
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all',
+              'bg-primary text-white hover:bg-primary/90 shadow-[0_0_16px_rgba(99,102,241,0.25)]',
+              'disabled:opacity-40 disabled:cursor-not-allowed'
+            )}
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            Save changes
+          </button>
         </div>
       </Section>
 
       <Section title="Password" sub="Use a strong password you don't use elsewhere.">
         <div className="space-y-4">
-          <Field label="Current password"><Input type="password" placeholder="••••••••" /></Field>
-          <Field label="New password"><Input type="password" placeholder="Min. 8 characters" /></Field>
-          <Field label="Confirm password"><Input type="password" placeholder="Repeat new password" /></Field>
+          <Field label="Current password">
+            <InputField type="password" value={currentPw} onChange={setCurrentPw} placeholder="••••••••" />
+          </Field>
+          <Field label="New password">
+            <InputField type="password" value={newPw} onChange={setNewPw} placeholder="Min. 8 characters" />
+          </Field>
+          <Field label="Confirm password">
+            <InputField type="password" value={confirmPw} onChange={setConfirmPw} placeholder="Repeat new password" />
+          </Field>
+          {pwError && (
+            <p className="text-[12px] text-red-400 text-right">{pwError}</p>
+          )}
+        </div>
+        <div className="flex justify-end pt-5">
+          <button
+            onClick={handleChangePassword}
+            disabled={pwSaving || !currentPw || !newPw || !confirmPw}
+            className={cn(
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all',
+              'bg-primary text-white hover:bg-primary/90 shadow-[0_0_16px_rgba(99,102,241,0.25)]',
+              'disabled:opacity-40 disabled:cursor-not-allowed'
+            )}
+          >
+            {pwSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            Change password
+          </button>
         </div>
       </Section>
 
@@ -95,20 +192,6 @@ export default function Profile() {
           </button>
         </div>
       </Section>
-
-      <div className="flex justify-end pt-2">
-        <button
-          onClick={handleSave}
-          className={cn(
-            'flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all',
-            saved
-              ? 'bg-green-500/20 border border-green-500/30 text-green-400'
-              : 'bg-primary text-white hover:bg-primary/90 shadow-[0_0_16px_rgba(99,102,241,0.25)]'
-          )}
-        >
-          {saved ? <><Check className="w-4 h-4" />Saved</> : 'Save changes'}
-        </button>
-      </div>
     </div>
   )
 }

@@ -1,12 +1,9 @@
-import { useState } from 'react'
-import { Shield, Smartphone, Monitor, LogOut, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Shield, Smartphone, Monitor, LogOut, Loader2, RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { sessionsApi, type Session, tokens, ApiError } from '@/lib/api'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-
-const sessions = [
-  { id: '1', device: 'Chrome on Windows 11', location: 'New Delhi, India', current: true,  lastActive: 'Now'          },
-  { id: '2', device: 'Safari on iPhone 15',  location: 'New Delhi, India', current: false, lastActive: '2 hours ago'   },
-  { id: '3', device: 'Chrome on MacBook',    location: 'Mumbai, India',    current: false, lastActive: '3 days ago'    },
-]
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -19,9 +16,72 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
+function deviceLabel(userAgent: string | null): string {
+  if (!userAgent) return 'Unknown device'
+  if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'Safari on iOS'
+  if (userAgent.includes('Android'))  return 'Chrome on Android'
+  if (userAgent.includes('Macintosh')) return 'Browser on macOS'
+  if (userAgent.includes('Windows'))   return 'Browser on Windows'
+  if (userAgent.includes('Linux'))     return 'Browser on Linux'
+  return 'Browser'
+}
+
+function timeAgo(iso: string): string {
+  const ms   = Date.now() - new Date(iso).getTime()
+  const mins  = Math.floor(ms / 60_000)
+  if (mins < 1)    return 'just now'
+  if (mins < 60)   return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)    return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
 export default function Security() {
-  const [twoFA, setTwoFA] = useState(false)
+  const navigate  = useNavigate()
+  const [sessions,    setSessions]    = useState<Session[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [revoking,    setRevoking]    = useState<string | null>(null)
+  const [signingOut,  setSigningOut]  = useState(false)
   const [sessionAlert, setSessionAlert] = useState(true)
+
+  async function loadSessions() {
+    setLoading(true)
+    try {
+      const data = await sessionsApi.list()
+      setSessions(data)
+    } catch {
+      // non-critical
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { void loadSessions() }, [])
+
+  async function handleRevoke(sessionId: string) {
+    setRevoking(sessionId)
+    try {
+      await sessionsApi.revoke(sessionId)
+      setSessions(s => s.filter(x => x.id !== sessionId))
+      toast.success('Session revoked')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to revoke session')
+    } finally {
+      setRevoking(null)
+    }
+  }
+
+  async function handleSignOutAll() {
+    setSigningOut(true)
+    try {
+      await sessionsApi.revokeAll()
+      tokens.clearAll()
+      navigate('/login', { replace: true })
+    } catch {
+      toast.error('Failed to sign out — please try again')
+      setSigningOut(false)
+    }
+  }
 
   return (
     <div className="px-10 py-8 max-w-[680px]">
@@ -30,7 +90,7 @@ export default function Security() {
         <p className="text-[13px] text-white/35">Protect your account and manage active sessions.</p>
       </div>
 
-      {/* 2FA */}
+      {/* Security settings */}
       <div className="rounded-xl border border-white/[0.07] bg-[#0F0F17] p-5 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -39,10 +99,12 @@ export default function Security() {
             </div>
             <div>
               <p className="text-[13.5px] font-medium text-white/80">Two-factor authentication</p>
-              <p className="text-[12px] text-white/35">Add an extra layer of security to your account</p>
+              <p className="text-[12px] text-white/35">Coming soon — TOTP support</p>
             </div>
           </div>
-          <Toggle on={twoFA} onChange={setTwoFA} />
+          <span className="text-[10px] font-mono text-white/25 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full">
+            Soon
+          </span>
         </div>
       </div>
 
@@ -63,31 +125,72 @@ export default function Security() {
 
       {/* Active sessions */}
       <div>
-        <h2 className="text-[14px] font-semibold text-white/80 mb-3">Active sessions</h2>
-        <div className="rounded-xl border border-white/[0.07] bg-[#0F0F17] overflow-hidden">
-          {sessions.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-4 px-5 py-4 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors group">
-              <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
-                <Monitor className="w-3.5 h-3.5 text-white/30" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-[13px] text-white/70 truncate">{s.device}</p>
-                  {s.current && <span className="text-[9px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full flex-shrink-0">Current</span>}
-                </div>
-                <p className="text-[11px] text-white/25">{s.location} · {s.lastActive}</p>
-              </div>
-              {!s.current && (
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] text-white/30 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-red-500/20">
-                  <LogOut className="w-3.5 h-3.5" />
-                  Revoke
-                </button>
-              )}
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[14px] font-semibold text-white/80">Active sessions</h2>
+          <button onClick={loadSessions} className="text-white/25 hover:text-white/50 transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <button className="mt-3 text-[12.5px] text-red-400/70 hover:text-red-400 transition-colors">
-          Sign out all other sessions
+
+        <div className="rounded-xl border border-white/[0.07] bg-[#0F0F17] overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-4 h-4 text-white/20 animate-spin" />
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="px-5 py-8 text-center text-[13px] text-white/25">
+              No active sessions found
+            </div>
+          ) : (
+            sessions.map((s, i) => (
+              <div
+                key={s.id}
+                className={cn(
+                  'flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group',
+                  i < sessions.length - 1 && 'border-b border-white/[0.04]'
+                )}
+              >
+                <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+                  <Monitor className="w-3.5 h-3.5 text-white/30" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] text-white/70 truncate">{deviceLabel(s.userAgent)}</p>
+                    {i === 0 && (
+                      <span className="text-[9px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        Current
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-white/25">
+                    {s.ipAddress ?? 'Unknown IP'} · {timeAgo(s.createdAt)}
+                  </p>
+                </div>
+                {i > 0 && (
+                  <button
+                    onClick={() => handleRevoke(s.id)}
+                    disabled={revoking === s.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] text-white/30 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 disabled:opacity-50 transition-all border border-transparent hover:border-red-500/20"
+                  >
+                    {revoking === s.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <LogOut className="w-3.5 h-3.5" />
+                    }
+                    Revoke
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <button
+          onClick={handleSignOutAll}
+          disabled={signingOut}
+          className="mt-3 flex items-center gap-1.5 text-[12.5px] text-red-400/70 hover:text-red-400 disabled:opacity-50 transition-colors"
+        >
+          {signingOut && <Loader2 className="w-3 h-3 animate-spin" />}
+          Sign out all sessions
         </button>
       </div>
     </div>

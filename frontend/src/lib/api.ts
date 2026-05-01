@@ -264,6 +264,43 @@ export const decisionsApi = {
   },
 }
 
+// ─── Users API ────────────────────────────────────────────────────────────
+
+export const usersApi = {
+  async updateMe(data: { name?: string; avatarUrl?: string | null }): Promise<AuthUser> {
+    const user = await apiFetch<AuthUser>('/users/me', {
+      method: 'PATCH',
+      body:   JSON.stringify(data),
+    })
+    tokens.setUser(user)
+    return user
+  },
+}
+
+// ─── Sessions API ──────────────────────────────────────────────────────────
+
+export type Session = {
+  id:        string
+  userAgent: string | null
+  ipAddress: string | null
+  createdAt: string
+  expiresAt: string
+}
+
+export const sessionsApi = {
+  async list(): Promise<Session[]> {
+    return apiFetch<Session[]>('/auth/sessions')
+  },
+
+  async revoke(sessionId: string): Promise<void> {
+    return apiFetch(`/auth/sessions/${sessionId}`, { method: 'DELETE' })
+  },
+
+  async revokeAll(): Promise<void> {
+    return apiFetch('/auth/logout', { method: 'POST' })
+  },
+}
+
 // ─── Search API ────────────────────────────────────────────────────────────
 
 export type SearchResult = {
