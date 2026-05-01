@@ -6,6 +6,8 @@ import {
   RefreshSchema,
   AcceptInviteSchema,
   ChangePasswordSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
 } from './auth.schema.js'
 import {
   signup,
@@ -16,6 +18,10 @@ import {
   getInviteInfo,
   acceptInvite,
   changePassword,
+  forgotPassword,
+  resetPassword,
+  listSessions,
+  revokeSession,
 } from './auth.service.js'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
 import { writeAudit } from '@/modules/audit/audit.service.js'
@@ -201,6 +207,67 @@ export default async function authRoutes(app: FastifyInstance) {
       ipAddress: req.ip,
     })
 
+    return reply.status(204).send()
+  })
+
+  // ── POST /api/v1/auth/forgot-password ────────────────────────────────────
+  // Public — always responds 204 (never reveals whether the email exists)
+  app.post('/forgot-password', {
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+    schema: {
+      tags: ['Auth'],
+      summary: 'Send a password reset link (always returns 204)',
+      body: zodToJsonSchema(ForgotPasswordSchema),
+    },
+  }, async (req, reply) => {
+    const { email } = ForgotPasswordSchema.parse(req.body)
+    const appUrl    = req.headers.origin as string ?? 'https://app.dyson.ai'
+    await forgotPassword(email, appUrl)
+    return reply.status(204).send()
+  })
+
+  // ── POST /api/v1/auth/reset-password ─────────────────────────────────────
+  // Public — validates the reset token and sets a new password
+  app.post('/reset-password', {
+    config: { rateLimit: { max: 10, timeWindow: '15 minutes' } },
+    schema: {
+      tags: ['Auth'],
+      summary: 'Reset password using a valid reset token',
+      body: zodToJsonSchema(ResetPasswordSchema),
+    },
+  }, async (req, reply) => {
+    const { token, newPassword } = ResetPasswordSchema.parse(req.body)
+    await resetPassword(token, newPassword)
+    return reply.status(204).send()
+  })
+
+  // ── GET /api/v1/auth/sessions ────────────────────────────────────────────
+  app.get('/sessions', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'List active sessions for the authenticated user',
+      security: [{ bearerAuth: [] }],
+    },
+    preHandler: [authMiddleware],
+  }, async (req, reply) => {
+    const { sub, tid } = req.user as { sub: string; tid: string }
+    const sessions     = await listSessions(sub, tid)
+    return reply.send({ data: sessions })
+  })
+
+  // ── DELETE /api/v1/auth/sessions/:id ─────────────────────────────────────
+  app.delete('/sessions/:id', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Revoke a specific session',
+      security: [{ bearerAuth: [] }],
+      params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+    },
+    preHandler: [authMiddleware],
+  }, async (req, reply) => {
+    const { sub, tid } = req.user as { sub: string; tid: string }
+    const { id }       = req.params as { id: string }
+    await revokeSession(id, sub, tid)
     return reply.status(204).send()
   })
 }

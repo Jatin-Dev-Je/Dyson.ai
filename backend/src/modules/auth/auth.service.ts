@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { createId } from '@paralleldrive/cuid2'
 import type { FastifyInstance } from 'fastify'
@@ -12,9 +12,11 @@ import {
   findValidRefreshToken,
   revokeRefreshToken,
   revokeAllUserTokens,
+  listActiveRefreshTokens,
   acceptInvitationAndCreateUser,
   updateUserPassword,
 } from './auth.repository.js'
+import { sendPasswordResetEmail } from '@/infra/email.js'
 import { findInvitationByToken } from '@/modules/users/users.repository.js'
 import { env } from '@/config/env.js'
 import { DysonError } from '@/shared/errors.js'
@@ -289,4 +291,116 @@ export async function changePassword(
 
   // Revoke all existing refresh tokens — force re-login on all devices
   await revokeAllUserTokens(userId)
+}
+
+// ─── Password reset ───────────────────────────────────────────────────────
+
+// Stateless reset token: base64url( userId:tenantId:expiresAt:HMAC )
+// HMAC secret includes current passwordHash so the token auto-invalidates
+// once the password is changed — no extra DB table required.
+
+function issuePasswordResetToken(userId: string, tenantId: string, passwordHash: string): string {
+  const expiresAt = Date.now() + 30 * 60 * 1000 // 30 minutes
+  const payload   = `${userId}:${tenantId}:${expiresAt}`
+  const sig       = createHmac('sha256', env.JWT_SECRET + passwordHash).update(payload).digest('hex')
+  return Buffer.from(`${payload}:${sig}`).toString('base64url')
+}
+
+function verifyPasswordResetToken(
+  token: string,
+  passwordHash: string
+): { userId: string; tenantId: string } | null {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString()
+    const lastColon = decoded.lastIndexOf(':')
+    const payload   = decoded.slice(0, lastColon)
+    const sig       = decoded.slice(lastColon + 1)
+    const parts     = payload.split(':')
+    if (parts.length !== 3) return null
+    const [userId, tenantId, expiresAtStr] = parts
+    if (!userId || !tenantId || !expiresAtStr) return null
+
+    const expected = createHmac('sha256', env.JWT_SECRET + passwordHash).update(payload).digest('hex')
+    const sigBuf   = Buffer.from(sig,      'hex')
+    const expBuf   = Buffer.from(expected, 'hex')
+    if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) return null
+    if (Date.now() > parseInt(expiresAtStr, 10)) return null
+
+    return { userId, tenantId }
+  } catch {
+    return null
+  }
+}
+
+export async function forgotPassword(email: string, appUrl: string): Promise<void> {
+  const user = await findUserByEmailGlobal(email)
+
+  // Always return success — don't leak whether the email exists
+  if (!user) return
+
+  const resetToken = issuePasswordResetToken(user.id, user.tenantId, user.passwordHash)
+
+  // Non-blocking — fire and forget; don't delay the HTTP response
+  void sendPasswordResetEmail({
+    to:         user.email,
+    name:       user.name,
+    resetToken,
+    appUrl,
+  }).catch(err => {
+    console.error('[auth] Failed to send password reset email:', err)
+  })
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  // We need the user's current passwordHash to verify the token,
+  // but we don't know who the user is yet — so we decode the payload first
+  // (without verifying the signature) to get the userId, then load the user,
+  // then verify the signature with the real passwordHash.
+  let userId: string
+  let tenantId: string
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString()
+    const lastColon = decoded.lastIndexOf(':')
+    const payload   = decoded.slice(0, lastColon)
+    const parts     = payload.split(':')
+    if (parts.length !== 3 || !parts[0] || !parts[1]) {
+      throw new DysonError('INVALID_TOKEN', 'Password reset link is invalid or expired', 400)
+    }
+    userId   = parts[0]
+    tenantId = parts[1]
+  } catch (err) {
+    if (err instanceof DysonError) throw err
+    throw new DysonError('INVALID_TOKEN', 'Password reset link is invalid or expired', 400)
+  }
+
+  const user = await findUserById(userId, tenantId)
+  if (!user) {
+    throw new DysonError('INVALID_TOKEN', 'Password reset link is invalid or expired', 400)
+  }
+
+  // Now verify the full token (including signature) with the real passwordHash
+  const verified = verifyPasswordResetToken(token, user.passwordHash)
+  if (!verified) {
+    throw new DysonError('INVALID_TOKEN', 'Password reset link is invalid or expired', 400)
+  }
+
+  const newHash = await hashPassword(newPassword)
+  await updateUserPassword(userId, tenantId, newHash)
+  await revokeAllUserTokens(userId)
+}
+
+// ─── Active sessions ──────────────────────────────────────────────────────
+
+export async function listSessions(userId: string, tenantId: string) {
+  return listActiveRefreshTokens(userId, tenantId)
+}
+
+export async function revokeSession(sessionId: string, userId: string, tenantId: string): Promise<void> {
+  // Load active tokens so we can verify ownership before revoking
+  const sessions = await listActiveRefreshTokens(userId, tenantId)
+  const session  = sessions.find(s => s.id === sessionId)
+  if (!session) {
+    throw new DysonError('NOT_FOUND', 'Session not found', 404)
+  }
+  await revokeRefreshToken(sessionId)
 }

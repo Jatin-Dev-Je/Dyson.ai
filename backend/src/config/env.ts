@@ -60,6 +60,11 @@ const EnvSchema = z.object({
   // ── Swagger ───────────────────────────────────────────────────────────────
   SWAGGER_ENABLED: z.string().transform(v => v === 'true').default('true'),
 
+  // ── Email — Resend (optional in dev, required in prod for invites + password reset) ──
+  RESEND_API_KEY:    z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().min(1).default('Dyson <noreply@dyson.ai>'),
+  APP_URL:           z.string().url().default('http://localhost:3000'),
+
   // ── Observability (optional in dev, recommended in prod) ──────────────────
   SENTRY_DSN: z.string().url().optional(),
   LOG_LEVEL:  z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),

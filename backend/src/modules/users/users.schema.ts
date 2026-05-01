@@ -6,8 +6,9 @@ export const UpdateMeSchema = z.object({
 })
 
 export const InviteUserSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
-  role:  z.enum(['admin', 'member', 'viewer']).default('member'),
+  email:         z.string().email().toLowerCase().trim(),
+  role:          z.enum(['admin', 'member', 'viewer']).default('member'),
+  workspaceName: z.string().optional(), // passed through to email template
 })
 
 export const ListUsersQuerySchema = z.object({

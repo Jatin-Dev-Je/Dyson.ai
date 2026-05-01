@@ -3,6 +3,8 @@ import {
   deactivateUser, createInvitation,
 } from './users.repository.js'
 import { NotFoundError, ForbiddenError, DysonError } from '@/shared/errors.js'
+import { sendInviteEmail } from '@/infra/email.js'
+import { env } from '@/config/env.js'
 import type { UpdateMeInput, InviteUserInput, ListUsersQuery } from './users.schema.js'
 
 export async function getMe(userId: string, tenantId: string) {
@@ -36,15 +38,19 @@ export async function inviteUser(
   if (inviterRole !== 'admin') throw new ForbiddenError()
   if (input.role === 'admin' && inviterRole !== 'admin') throw new ForbiddenError()
 
-  const invite = await createInvitation({
-    tenantId,
-    invitedBy,
-    email: input.email,
-    role:  input.role,
+  const invite   = await createInvitation({ tenantId, invitedBy, email: input.email, role: input.role })
+  const inviter  = await findUserById(invitedBy, tenantId)
+
+  void sendInviteEmail({
+    to:            invite.email,
+    inviterName:   inviter?.name ?? 'Your team',
+    workspaceName: input.workspaceName ?? 'your workspace',
+    inviteToken:   invite.token,
+    appUrl:        env.APP_URL,
+  }).catch(err => {
+    console.error('[users] Failed to send invite email:', err)
   })
 
-  // TODO Week 6: send invite email via Resend/SendGrid
-  // For now, return the invite token so it can be used in dev
   return invite
 }
 

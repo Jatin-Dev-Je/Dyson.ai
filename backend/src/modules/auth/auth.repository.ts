@@ -159,6 +159,28 @@ export async function storeRefreshToken(opts: {
   return row
 }
 
+// List active (non-revoked, non-expired) sessions for a user
+export async function listActiveRefreshTokens(userId: string, tenantId: string) {
+  return db
+    .select({
+      id:        refreshTokens.id,
+      userAgent: refreshTokens.userAgent,
+      ipAddress: refreshTokens.ipAddress,
+      createdAt: refreshTokens.createdAt,
+      expiresAt: refreshTokens.expiresAt,
+    })
+    .from(refreshTokens)
+    .where(
+      and(
+        eq(refreshTokens.userId,   userId),
+        eq(refreshTokens.tenantId, tenantId),
+        isNull(refreshTokens.revokedAt),
+        gt(refreshTokens.expiresAt, new Date()),
+      )
+    )
+    .orderBy(refreshTokens.createdAt)
+}
+
 // tokenHash is an HMAC-SHA256 hex digest — deterministic, so we can use eq() lookup
 export async function findValidRefreshToken(tokenHash: string) {
   const [row] = await db
