@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bell, Zap, List, Plug, Users, FileText,
@@ -75,7 +75,7 @@ export function NotificationPanel() {
         onClick={() => setOpen(v => !v)}
         className={cn(
           'relative h-7 w-7 flex items-center justify-center rounded-md transition-colors',
-          open ? 'bg-white/[0.07] text-text-1' : 'text-text-3 hover:text-text-2 hover:bg-white/[0.05]'
+          open ? 'bg-subtle text-ink-1' : 'text-ink-3 hover:text-ink-2 hover:bg-hover'
         )}
       >
         <Bell className="w-4 h-4" />
@@ -93,12 +93,12 @@ export function NotificationPanel() {
             animate={{ opacity: 1, scale: 1,    y: 0  }}
             exit  ={{ opacity: 0, scale: 0.97, y: -6 }}
             transition={{ duration: 0.12, ease: 'easeOut' }}
-            className="absolute right-0 top-full mt-2 w-[380px] rounded-xl border border-[#2E2E2E] bg-[#1C1C1C] shadow-modal z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[380px] rounded-xl border border-line bg-surface shadow-modal z-50 overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#2E2E2E]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-line">
               <div className="flex items-center gap-3">
-                <span className="text-[13px] font-semibold text-text-1">Notifications</span>
+                <span className="text-[13px] font-semibold text-ink-1">Notifications</span>
                 {unread > 0 && (
                   <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full">
                     {unread} new
@@ -107,25 +107,25 @@ export function NotificationPanel() {
               </div>
               <div className="flex items-center gap-2">
                 {unread > 0 && (
-                  <button onClick={markAll} className="text-[11px] text-text-3 hover:text-primary transition-colors">
+                  <button onClick={markAll} className="text-[11px] text-ink-3 hover:text-primary transition-colors">
                     Mark all read
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} className="text-text-4 hover:text-text-2 transition-colors p-0.5">
+                <button onClick={() => setOpen(false)} className="text-ink-4 hover:text-ink-2 transition-colors p-0.5">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
             {/* Filter tabs */}
-            <div className="flex border-b border-[#2E2E2E]">
+            <div className="flex border-b border-line">
               {(['all', 'unread'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={cn(
                     'flex-1 py-2 text-[12px] font-medium transition-colors',
-                    filter === f ? 'text-text-1 border-b-2 border-primary' : 'text-text-3 hover:text-text-2'
+                    filter === f ? 'text-ink-1 border-b-2 border-primary' : 'text-ink-3 hover:text-ink-2'
                   )}
                 >
                   {f === 'all' ? 'All' : `Unread (${unread})`}
@@ -137,8 +137,8 @@ export function NotificationPanel() {
             <div className="max-h-[400px] overflow-y-auto">
               {visible.length === 0 ? (
                 <div className="py-12 text-center">
-                  <Check className="w-8 h-8 text-text-4 mx-auto mb-2" />
-                  <p className="text-[13px] text-text-3">All caught up</p>
+                  <Check className="w-8 h-8 text-ink-4 mx-auto mb-2" />
+                  <p className="text-[13px] text-ink-3">All caught up</p>
                 </div>
               ) : (
                 visible.map(n => {
@@ -148,8 +148,8 @@ export function NotificationPanel() {
                       key={n.id}
                       onClick={() => markOne(n.id)}
                       className={cn(
-                        'flex gap-3 px-4 py-3.5 border-b border-[#2E2E2E] last:border-0 cursor-pointer group transition-colors',
-                        n.read ? 'hover:bg-white/[0.02]' : 'bg-primary/[0.03] hover:bg-primary/[0.05]'
+                        'flex gap-3 px-4 py-3.5 border-b border-line last:border-0 cursor-pointer group transition-colors',
+                        n.read ? 'hover:bg-subtle' : 'bg-primary/[0.03] hover:bg-primary/[0.05]'
                       )}
                     >
                       {/* Icon */}
@@ -160,18 +160,18 @@ export function NotificationPanel() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={cn('text-[13px] font-medium leading-snug', n.read ? 'text-text-2' : 'text-text-1')}>
+                          <p className={cn('text-[13px] font-medium leading-snug', n.read ? 'text-ink-2' : 'text-ink-1')}>
                             {n.title}
                           </p>
                           <button
                             onClick={e => { e.stopPropagation(); dismiss(n.id) }}
-                            className="text-text-4 hover:text-text-2 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-0.5"
+                            className="text-ink-4 hover:text-ink-2 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 mt-0.5"
                           >
                             <X className="w-3 h-3" />
                           </button>
                         </div>
-                        <p className="text-[12px] text-text-3 leading-relaxed mt-0.5">{n.body}</p>
-                        <p className="text-[10px] font-mono text-text-4 mt-1.5">{n.time}</p>
+                        <p className="text-[12px] text-ink-3 leading-relaxed mt-0.5">{n.body}</p>
+                        <p className="text-[10px] font-mono text-ink-4 mt-1.5">{n.time}</p>
                       </div>
 
                       {/* Unread dot */}
@@ -185,12 +185,12 @@ export function NotificationPanel() {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2.5 border-t border-[#2E2E2E] flex items-center justify-between">
-              <button className="text-[11px] text-text-3 hover:text-text-2 transition-colors flex items-center gap-1">
+            <div className="px-4 py-2.5 border-t border-line flex items-center justify-between">
+              <button className="text-[11px] text-ink-3 hover:text-ink-2 transition-colors flex items-center gap-1">
                 <Settings className="w-3 h-3" />
                 Notification settings
               </button>
-              <button onClick={() => setNotifs([])} className="text-[11px] text-text-4 hover:text-red-400 transition-colors">
+              <button onClick={() => setNotifs([])} className="text-[11px] text-ink-4 hover:text-red-400 transition-colors">
                 Clear all
               </button>
             </div>
@@ -200,3 +200,5 @@ export function NotificationPanel() {
     </div>
   )
 }
+
+

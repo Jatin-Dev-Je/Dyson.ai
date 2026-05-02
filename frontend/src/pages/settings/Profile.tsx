@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Camera, Check, Loader2 } from 'lucide-react'
 import { authApi, usersApi, ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -6,10 +6,10 @@ import { toast } from 'sonner'
 
 function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   return (
-    <div className="py-7 border-b border-white/[0.06] last:border-0">
+    <div className="py-7 border-b border-line last:border-0">
       <div className="mb-5">
-        <h3 className="text-[14px] font-semibold text-white/85">{title}</h3>
-        {sub && <p className="text-[12.5px] text-white/35 mt-0.5">{sub}</p>}
+        <h3 className="text-[14px] font-semibold text-ink-1">{title}</h3>
+        {sub && <p className="text-[12.5px] text-ink-3 mt-0.5">{sub}</p>}
       </div>
       {children}
     </div>
@@ -19,7 +19,7 @@ function Section({ title, sub, children }: { title: string; sub?: string; childr
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-3 gap-6 items-start">
-      <label className="text-[13px] text-white/50 pt-2.5">{label}</label>
+      <label className="text-[13px] text-ink-2 pt-2.5">{label}</label>
       <div className="col-span-2">{children}</div>
     </div>
   )
@@ -38,11 +38,11 @@ function InputField({
       onChange={e => onChange?.(e.target.value)}
       placeholder={placeholder}
       className={cn(
-        'w-full h-9 px-3.5 rounded-xl border bg-white/[0.03] text-[13px] text-white placeholder:text-white/20',
+        'w-full h-9 px-3.5 rounded-xl border bg-subtle text-[13px] text-ink-1 placeholder:text-ink-4',
         'outline-none transition-all',
         readOnly
-          ? 'border-white/[0.04] text-white/40 cursor-default'
-          : 'border-white/[0.08] focus:border-primary/50 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/10'
+          ? 'border-line text-ink-3 cursor-default'
+          : 'border-line focus:border-primary/50 focus:bg-subtle focus:ring-2 focus:ring-primary/10'
       )}
     />
   )
@@ -69,7 +69,7 @@ export default function Profile() {
       await usersApi.updateMe({ name: name.trim() })
       toast.success('Profile updated')
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to save — please try again')
+      toast.error(err instanceof ApiError ? err.message : 'Failed to save â€” please try again')
     } finally {
       setSaving(false)
     }
@@ -86,7 +86,7 @@ export default function Profile() {
       setCurrentPw('')
       setNewPw('')
       setConfirmPw('')
-      toast.success('Password changed — you have been signed out of other devices')
+      toast.success('Password changed â€” you have been signed out of other devices')
     } catch (err) {
       setPwError(err instanceof ApiError
         ? (err.code === 'INVALID_CREDENTIALS' ? 'Current password is incorrect' : err.message)
@@ -99,25 +99,25 @@ export default function Profile() {
   return (
     <div className="px-10 py-8 max-w-[680px]">
       <div className="mb-8">
-        <h1 className="text-[20px] font-semibold text-white/90 mb-1">Profile</h1>
-        <p className="text-[13px] text-white/35">Manage your personal account settings.</p>
+        <h1 className="text-[20px] font-semibold text-ink-1 mb-1">Profile</h1>
+        <p className="text-[13px] text-ink-3">Manage your personal account settings.</p>
       </div>
 
       <Section title="Avatar">
         <div className="flex items-center gap-5">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/40 to-violet-500/40 border border-primary/20 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/40 to-violet-500/40 border border-primary/20 flex items-center justify-center">
               <span className="text-[22px] font-bold text-primary">{initials}</span>
             </div>
-            <button className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#131320] border border-white/[0.10] flex items-center justify-center hover:bg-white/[0.07] transition-colors">
-              <Camera className="w-3 h-3 text-white/50" />
+            <button className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-canvas border border-line flex items-center justify-center hover:bg-hover transition-colors">
+              <Camera className="w-3 h-3 text-ink-2" />
             </button>
           </div>
           <div>
-            <button className="text-[13px] text-white/60 border border-white/[0.08] px-3 py-1.5 rounded-lg hover:text-white hover:border-white/[0.14] hover:bg-white/[0.04] transition-all">
+            <button className="text-[13px] text-ink-2 border border-line px-3 py-1.5 rounded-lg hover:text-ink-1 hover:border-line-strong hover:bg-hover transition-all">
               Upload photo
             </button>
-            <p className="text-[11px] text-white/25 mt-1.5">JPG or PNG, max 2MB</p>
+            <p className="text-[11px] text-ink-3 mt-1.5">JPG or PNG, max 2MB</p>
           </div>
         </div>
       </Section>
@@ -140,7 +140,7 @@ export default function Profile() {
             disabled={saving || !name.trim() || name.trim() === user?.name}
             className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all',
-              'bg-primary text-white hover:bg-primary/90 shadow-[0_0_16px_rgba(99,102,241,0.25)]',
+              'bg-primary text-white hover:bg-primary/90 shadow-sm',
               'disabled:opacity-40 disabled:cursor-not-allowed'
             )}
           >
@@ -153,7 +153,7 @@ export default function Profile() {
       <Section title="Password" sub="Use a strong password you don't use elsewhere.">
         <div className="space-y-4">
           <Field label="Current password">
-            <InputField type="password" value={currentPw} onChange={setCurrentPw} placeholder="••••••••" />
+            <InputField type="password" value={currentPw} onChange={setCurrentPw} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
           </Field>
           <Field label="New password">
             <InputField type="password" value={newPw} onChange={setNewPw} placeholder="Min. 8 characters" />
@@ -171,7 +171,7 @@ export default function Profile() {
             disabled={pwSaving || !currentPw || !newPw || !confirmPw}
             className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all',
-              'bg-primary text-white hover:bg-primary/90 shadow-[0_0_16px_rgba(99,102,241,0.25)]',
+              'bg-primary text-white hover:bg-primary/90 shadow-sm',
               'disabled:opacity-40 disabled:cursor-not-allowed'
             )}
           >
@@ -185,7 +185,7 @@ export default function Profile() {
         <div className="flex items-center justify-between p-4 rounded-xl border border-red-500/20 bg-red-500/[0.04]">
           <div>
             <p className="text-[13px] font-medium text-red-400">Delete account</p>
-            <p className="text-[11.5px] text-white/30 mt-0.5">Permanently delete your account and all data.</p>
+            <p className="text-[11.5px] text-ink-3 mt-0.5">Permanently delete your account and all data.</p>
           </div>
           <button className="px-4 py-2 rounded-xl border border-red-500/30 text-[12.5px] text-red-400 hover:bg-red-500/10 transition-all">
             Delete account
@@ -195,3 +195,7 @@ export default function Profile() {
     </div>
   )
 }
+
+
+
+

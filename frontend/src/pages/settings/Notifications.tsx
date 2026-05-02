@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 type Setting = { id: string; label: string; sub: string; email: boolean; slack: boolean }
@@ -39,24 +39,24 @@ export default function Notifications() {
   return (
     <div className="px-10 py-8 max-w-[680px]">
       <div className="mb-8">
-        <h1 className="text-[20px] font-semibold text-white/90 mb-1">Notifications</h1>
-        <p className="text-[13px] text-white/35">Choose how and when Dyson notifies you.</p>
+        <h1 className="text-[20px] font-semibold text-ink-1 mb-1">Notifications</h1>
+        <p className="text-[13px] text-ink-3">Choose how and when Dyson notifies you.</p>
       </div>
 
-      <div className="rounded-xl border border-white/[0.07] bg-[#0F0F17] overflow-hidden">
+      <div className="rounded-lg border border-line bg-surface overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_72px_72px] gap-4 px-5 py-3 border-b border-white/[0.06]">
-          <span className="text-[10px] font-mono text-white/25 uppercase tracking-wider">Notification</span>
-          <span className="text-[10px] font-mono text-white/25 uppercase tracking-wider text-center">Email</span>
-          <span className="text-[10px] font-mono text-white/25 uppercase tracking-wider text-center">Slack</span>
+        <div className="grid grid-cols-[1fr_72px_72px] gap-4 px-5 py-3 border-b border-line">
+          <span className="text-[10px] font-mono text-ink-3 uppercase tracking-wider">Notification</span>
+          <span className="text-[10px] font-mono text-ink-3 uppercase tracking-wider text-center">Email</span>
+          <span className="text-[10px] font-mono text-ink-3 uppercase tracking-wider text-center">Slack</span>
         </div>
 
         <div className="divide-y divide-white/[0.04]">
           {settings.map(s => (
-            <div key={s.id} className="grid grid-cols-[1fr_72px_72px] gap-4 items-center px-5 py-4 hover:bg-white/[0.02] transition-colors">
+            <div key={s.id} className="grid grid-cols-[1fr_72px_72px] gap-4 items-center px-5 py-4 hover:bg-subtle transition-colors">
               <div>
-                <p className="text-[13px] text-white/70">{s.label}</p>
-                <p className="text-[11.5px] text-white/30 mt-0.5">{s.sub}</p>
+                <p className="text-[13px] text-ink-2">{s.label}</p>
+                <p className="text-[11.5px] text-ink-3 mt-0.5">{s.sub}</p>
               </div>
               <div className="flex justify-center">
                 <Toggle on={s.email} onChange={v => update(s.id, 'email', v)} />
@@ -71,3 +71,6 @@ export default function Notifications() {
     </div>
   )
 }
+
+
+

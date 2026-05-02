@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+﻿import { cn } from '@/lib/utils'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 const badgeVariants = cva(
@@ -6,14 +6,14 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default:  'bg-white/[0.04] text-text-3 border-[#2E2E2E]',
+        default:  'bg-subtle text-ink-3 border-line',
         primary:  'bg-primary/10 text-primary border-primary/20',
         citation: 'bg-citation/10 text-citation border-citation/20',
         success:  'bg-green-500/10 text-green-400 border-green-500/20',
         warning:  'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
         danger:   'bg-red-500/10 text-red-400 border-red-500/20',
         slack:    'bg-[#4A154B]/20 text-[#E01E5A] border-[#4A154B]/30',
-        github:   'bg-white/[0.04] text-[#8B949E] border-[#2E2E2E]',
+        github:   'bg-subtle text-[#8B949E] border-line',
       },
     },
     defaultVariants: { variant: 'default' },
@@ -25,3 +25,4 @@ type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof ba
 export function Badge({ className, variant, ...props }: BadgeProps) {
   return <span className={cn(badgeVariants({ variant }), className)} {...props} />
 }
+

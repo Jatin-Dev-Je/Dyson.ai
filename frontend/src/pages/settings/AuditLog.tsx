@@ -1,4 +1,4 @@
-import { FileText, Search } from 'lucide-react'
+﻿import { FileText, Search } from 'lucide-react'
 import { SourcePill } from '@/components/shared/SourcePill'
 
 const logs = [
@@ -19,7 +19,7 @@ const actionColor: Record<string, string> = {
   'member.invited':     'text-violet-400 bg-violet-500/10 border-violet-500/20',
   'pack.generated':     'text-blue-400 bg-blue-500/10 border-blue-500/20',
   'decision.flagged':   'text-orange-400 bg-orange-500/10 border-orange-500/20',
-  'source.synced':      'text-white/40 bg-white/[0.04] border-white/[0.08]',
+  'source.synced':      'text-ink-3 bg-subtle border-line',
 }
 
 export default function AuditLog() {
@@ -27,36 +27,39 @@ export default function AuditLog() {
     <div className="px-10 py-8 max-w-[820px]">
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-[20px] font-semibold text-white/90 mb-1">Audit log</h1>
-          <p className="text-[13px] text-white/35">A record of all actions in your workspace.</p>
+          <h1 className="text-[20px] font-semibold text-ink-1 mb-1">Audit log</h1>
+          <p className="text-[13px] text-ink-3">A record of all actions in your workspace.</p>
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-          <input placeholder="Filter logs..." className="h-8 pl-9 pr-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-[13px] text-white/60 placeholder:text-white/20 outline-none focus:border-primary/40 transition-all w-48" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-3" />
+          <input placeholder="Filter logs..." className="h-8 pl-9 pr-3 rounded-xl border border-line bg-subtle text-[13px] text-ink-2 placeholder:text-ink-4 outline-none focus:border-primary/40 transition-all w-48" />
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.07] bg-[#0F0F17] overflow-hidden">
-        <div className="grid grid-cols-[130px_1fr_140px_80px] gap-4 px-5 py-3 border-b border-white/[0.06]">
+      <div className="rounded-lg border border-line bg-surface overflow-hidden">
+        <div className="grid grid-cols-[130px_1fr_140px_80px] gap-4 px-5 py-3 border-b border-line">
           {['Action', 'Detail', 'Actor', 'Time'].map(h => (
-            <span key={h} className="text-[10px] font-mono text-white/25 uppercase tracking-wider">{h}</span>
+            <span key={h} className="text-[10px] font-mono text-ink-3 uppercase tracking-wider">{h}</span>
           ))}
         </div>
         <div className="divide-y divide-white/[0.04]">
           {logs.map((log, i) => (
-            <div key={log.id} className="grid grid-cols-[130px_1fr_140px_80px] gap-4 items-center px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${actionColor[log.action] ?? 'text-white/30 bg-white/[0.02] border-white/[0.06]'}`}>
+            <div key={log.id} className="grid grid-cols-[130px_1fr_140px_80px] gap-4 items-center px-5 py-3.5 hover:bg-subtle transition-colors">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${actionColor[log.action] ?? 'text-ink-3 bg-subtle border-line'}`}>
                 {log.action.replace('.', ' ')}
               </span>
-              <span className="text-[12.5px] text-white/55 truncate">{log.detail}</span>
-              <span className="text-[12px] text-white/35 truncate">{log.actor}</span>
-              <span className="text-[11px] font-mono text-white/20">{log.time}</span>
+              <span className="text-[12.5px] text-ink-2 truncate">{log.detail}</span>
+              <span className="text-[12px] text-ink-3 truncate">{log.actor}</span>
+              <span className="text-[11px] font-mono text-ink-4">{log.time}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <p className="text-[11.5px] text-white/20 text-center mt-5">Showing last 30 days · Upgrade to Business for full history export</p>
+      <p className="text-[11.5px] text-ink-4 text-center mt-5">Showing last 30 days Â· Upgrade to Business for full history export</p>
     </div>
   )
 }
+
+
+

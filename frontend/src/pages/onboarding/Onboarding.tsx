@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Zap, Github, MessageSquare, Users, Sparkles } from 'lucide-react'
@@ -13,7 +13,7 @@ const steps = [
   { id: 'done',      label: 'Done'      },
 ]
 
-// ─── Step 1: Workspace ────────────────────────────────────────────────────
+// â”€â”€â”€ Step 1: Workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StepWorkspace({ onNext }: { onNext: () => void }) {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -26,29 +26,29 @@ function StepWorkspace({ onNext }: { onNext: () => void }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[22px] font-semibold text-white mb-1.5">Name your workspace</h2>
-        <p className="text-[13.5px] text-white/40">Usually your company name. You can change this anytime.</p>
+        <h2 className="text-[22px] font-semibold text-ink-1 mb-1.5">Name your workspace</h2>
+        <p className="text-[13.5px] text-ink-3">Usually your company name. You can change this anytime.</p>
       </div>
       <div className="space-y-4">
         <div>
-          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Workspace name</label>
+          <label className="block text-[12px] font-medium text-ink-2 mb-1.5">Workspace name</label>
           <input
             autoFocus
             value={name}
             onChange={e => handleName(e.target.value)}
             placeholder="Acme Corp"
-            className="w-full h-11 px-4 rounded-xl border border-white/[0.08] bg-white/[0.03] text-[14px] text-white placeholder:text-white/20 outline-none focus:border-primary/50 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/10 transition-all"
+            className="w-full h-11 px-4 rounded-xl border border-line bg-subtle text-[14px] text-ink-1 placeholder:text-ink-4 outline-none focus:border-primary/50 focus:bg-subtle focus:ring-2 focus:ring-primary/10 transition-all"
           />
         </div>
         <div>
-          <label className="block text-[12px] font-medium text-white/50 mb-1.5">Workspace URL</label>
-          <div className="flex items-center h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden focus-within:border-primary/50 transition-all">
-            <span className="px-4 text-[13px] text-white/25 border-r border-white/[0.06] h-full flex items-center flex-shrink-0">dyson.ai/</span>
+          <label className="block text-[12px] font-medium text-ink-2 mb-1.5">Workspace URL</label>
+          <div className="flex items-center h-11 rounded-xl border border-line bg-subtle overflow-hidden focus-within:border-primary/50 transition-all">
+            <span className="px-4 text-[13px] text-ink-3 border-r border-line h-full flex items-center flex-shrink-0">dyson.ai/</span>
             <input
               value={slug}
               onChange={e => setSlug(e.target.value)}
               placeholder="acme-corp"
-              className="flex-1 px-4 bg-transparent text-[13px] text-white placeholder:text-white/20 outline-none"
+              className="flex-1 px-4 bg-transparent text-[13px] text-ink-1 placeholder:text-ink-4 outline-none"
             />
           </div>
         </div>
@@ -56,7 +56,7 @@ function StepWorkspace({ onNext }: { onNext: () => void }) {
       <button
         onClick={onNext}
         disabled={!name.trim()}
-        className="w-full h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+        className="w-full h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
       >
         Continue <ArrowRight className="w-4 h-4" />
       </button>
@@ -64,25 +64,25 @@ function StepWorkspace({ onNext }: { onNext: () => void }) {
   )
 }
 
-// ─── Step 2: Connect Slack ────────────────────────────────────────────────
+// â”€â”€â”€ Step 2: Connect Slack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StepSlack({ onNext }: { onNext: () => void }) {
   const [connected, setConnected] = useState(false)
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[22px] font-semibold text-white mb-1.5">Connect Slack</h2>
-        <p className="text-[13.5px] text-white/40">Dyson reads message history and detects decisions in your channels.</p>
+        <h2 className="text-[22px] font-semibold text-ink-1 mb-1.5">Connect Slack</h2>
+        <p className="text-[13.5px] text-ink-3">Dyson reads message history and detects decisions in your channels.</p>
       </div>
 
-      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5 space-y-3">
-        <p className="text-[12px] font-mono text-white/30 uppercase tracking-wider">Permissions requested</p>
-        {['channels:history — read messages', 'channels:read — list channels', 'users:read — resolve users', 'chat:write — post bot responses'].map(p => (
+      <div className="rounded-lg border border-line bg-subtle p-5 space-y-3">
+        <p className="text-[12px] font-mono text-ink-3 uppercase tracking-wider">Permissions requested</p>
+        {['channels:history â€” read messages', 'channels:read â€” list channels', 'users:read â€” resolve users', 'chat:write â€” post bot responses'].map(p => (
           <div key={p} className="flex items-center gap-2.5">
             <div className="w-4 h-4 rounded-full bg-green-500/15 border border-green-500/20 flex items-center justify-center flex-shrink-0">
               <Check className="w-2.5 h-2.5 text-green-400" />
             </div>
-            <span className="text-[13px] font-mono text-white/40">{p}</span>
+            <span className="text-[13px] font-mono text-ink-3">{p}</span>
           </div>
         ))}
       </div>
@@ -94,13 +94,13 @@ function StepSlack({ onNext }: { onNext: () => void }) {
           </div>
           <div>
             <p className="text-[13px] font-medium text-green-400">Slack connected</p>
-            <p className="text-[11px] text-white/30">acme-corp.slack.com · 24 channels syncing</p>
+            <p className="text-[11px] text-ink-3">acme-corp.slack.com Â· 24 channels syncing</p>
           </div>
         </div>
       ) : (
         <button
           onClick={() => setConnected(true)}
-          className="w-full h-11 rounded-xl border border-white/[0.10] bg-white/[0.04] text-[13.5px] font-medium text-white/80 hover:bg-white/[0.07] hover:border-white/[0.16] hover:text-white transition-all flex items-center justify-center gap-2.5"
+          className="w-full h-11 rounded-xl border border-line bg-subtle text-[13.5px] font-medium text-ink-1 hover:bg-hover hover:border-white/[0.16] hover:text-ink-1 transition-all flex items-center justify-center gap-2.5"
         >
           <MessageSquare className="w-4 h-4 text-[#E01E5A]" />
           Connect Slack workspace
@@ -108,13 +108,13 @@ function StepSlack({ onNext }: { onNext: () => void }) {
       )}
 
       <div className="flex gap-3">
-        <button onClick={onNext} className="flex-1 h-11 rounded-xl border border-white/[0.07] text-[13px] text-white/40 hover:text-white/70 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
+        <button onClick={onNext} className="flex-1 h-11 rounded-xl border border-line text-[13px] text-ink-3 hover:text-ink-2 hover:border-line hover:bg-hover transition-all">
           Skip for now
         </button>
         <button
           onClick={onNext}
           disabled={!connected}
-          className="flex-1 h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+          className="flex-1 h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
         >
           Continue <ArrowRight className="w-4 h-4" />
         </button>
@@ -123,25 +123,25 @@ function StepSlack({ onNext }: { onNext: () => void }) {
   )
 }
 
-// ─── Step 3: Connect GitHub ───────────────────────────────────────────────
+// â”€â”€â”€ Step 3: Connect GitHub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StepGitHub({ onNext }: { onNext: () => void }) {
   const [connected, setConnected] = useState(false)
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[22px] font-semibold text-white mb-1.5">Connect GitHub</h2>
-        <p className="text-[13.5px] text-white/40">Dyson ingests PRs, issues, and commits to link code changes to decisions.</p>
+        <h2 className="text-[22px] font-semibold text-ink-1 mb-1.5">Connect GitHub</h2>
+        <p className="text-[13.5px] text-ink-3">Dyson ingests PRs, issues, and commits to link code changes to decisions.</p>
       </div>
 
-      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5 space-y-3">
-        <p className="text-[12px] font-mono text-white/30 uppercase tracking-wider">Permissions requested</p>
-        {['contents — read repository code', 'pull_requests — read PR history', 'issues — read issue context', 'metadata — read repo info'].map(p => (
+      <div className="rounded-lg border border-line bg-subtle p-5 space-y-3">
+        <p className="text-[12px] font-mono text-ink-3 uppercase tracking-wider">Permissions requested</p>
+        {['contents â€” read repository code', 'pull_requests â€” read PR history', 'issues â€” read issue context', 'metadata â€” read repo info'].map(p => (
           <div key={p} className="flex items-center gap-2.5">
             <div className="w-4 h-4 rounded-full bg-green-500/15 border border-green-500/20 flex items-center justify-center flex-shrink-0">
               <Check className="w-2.5 h-2.5 text-green-400" />
             </div>
-            <span className="text-[13px] font-mono text-white/40">{p}</span>
+            <span className="text-[13px] font-mono text-ink-3">{p}</span>
           </div>
         ))}
       </div>
@@ -153,13 +153,13 @@ function StepGitHub({ onNext }: { onNext: () => void }) {
           </div>
           <div>
             <p className="text-[13px] font-medium text-green-400">GitHub connected</p>
-            <p className="text-[11px] text-white/30">acme-corp · 8 repositories syncing</p>
+            <p className="text-[11px] text-ink-3">acme-corp Â· 8 repositories syncing</p>
           </div>
         </div>
       ) : (
         <button
           onClick={() => setConnected(true)}
-          className="w-full h-11 rounded-xl border border-white/[0.10] bg-white/[0.04] text-[13.5px] font-medium text-white/80 hover:bg-white/[0.07] hover:border-white/[0.16] hover:text-white transition-all flex items-center justify-center gap-2.5"
+          className="w-full h-11 rounded-xl border border-line bg-subtle text-[13.5px] font-medium text-ink-1 hover:bg-hover hover:border-white/[0.16] hover:text-ink-1 transition-all flex items-center justify-center gap-2.5"
         >
           <Github className="w-4 h-4" />
           Connect GitHub organisation
@@ -167,13 +167,13 @@ function StepGitHub({ onNext }: { onNext: () => void }) {
       )}
 
       <div className="flex gap-3">
-        <button onClick={onNext} className="flex-1 h-11 rounded-xl border border-white/[0.07] text-[13px] text-white/40 hover:text-white/70 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
+        <button onClick={onNext} className="flex-1 h-11 rounded-xl border border-line text-[13px] text-ink-3 hover:text-ink-2 hover:border-line hover:bg-hover transition-all">
           Skip for now
         </button>
         <button
           onClick={onNext}
           disabled={!connected}
-          className="flex-1 h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+          className="flex-1 h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
         >
           Continue <ArrowRight className="w-4 h-4" />
         </button>
@@ -182,15 +182,15 @@ function StepGitHub({ onNext }: { onNext: () => void }) {
   )
 }
 
-// ─── Step 4: Invite ───────────────────────────────────────────────────────
+// â”€â”€â”€ Step 4: Invite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StepInvite({ onNext }: { onNext: () => void }) {
   const [emails, setEmails] = useState(['', '', ''])
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[22px] font-semibold text-white mb-1.5">Invite your team</h2>
-        <p className="text-[13.5px] text-white/40">Add engineers and engineering managers. They'll get an email invite.</p>
+        <h2 className="text-[22px] font-semibold text-ink-1 mb-1.5">Invite your team</h2>
+        <p className="text-[13.5px] text-ink-3">Add engineers and engineering managers. They'll get an email invite.</p>
       </div>
       <div className="space-y-2.5">
         {emails.map((email, i) => (
@@ -199,23 +199,23 @@ function StepInvite({ onNext }: { onNext: () => void }) {
             value={email}
             onChange={e => setEmails(v => v.map((x, j) => j === i ? e.target.value : x))}
             placeholder={`teammate${i + 1}@company.com`}
-            className="w-full h-10 px-4 rounded-xl border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/15 outline-none focus:border-primary/50 focus:bg-white/[0.05] focus:ring-2 focus:ring-primary/10 transition-all"
+            className="w-full h-10 px-4 rounded-xl border border-line bg-surface text-[13px] text-ink-1 placeholder:text-ink-4 outline-none focus:border-primary/50 focus:bg-surface focus:ring-2 focus:ring-primary/10 transition-all"
           />
         ))}
         <button
           onClick={() => setEmails(v => [...v, ''])}
-          className="text-[12.5px] text-white/30 hover:text-primary transition-colors"
+          className="text-[12.5px] text-ink-3 hover:text-primary transition-colors"
         >
           + Add another
         </button>
       </div>
       <div className="flex gap-3">
-        <button onClick={onNext} className="flex-1 h-11 rounded-xl border border-white/[0.07] text-[13px] text-white/40 hover:text-white/70 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
+        <button onClick={onNext} className="flex-1 h-11 rounded-xl border border-line text-[13px] text-ink-3 hover:text-ink-2 hover:border-line hover:bg-hover transition-all">
           Skip for now
         </button>
         <button
           onClick={onNext}
-          className="flex-1 h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+          className="flex-1 h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-sm"
         >
           Send invites <ArrowRight className="w-4 h-4" />
         </button>
@@ -224,7 +224,7 @@ function StepInvite({ onNext }: { onNext: () => void }) {
   )
 }
 
-// ─── Step 5: Done ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Step 5: Done â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StepDone({ onFinish }: { onFinish: () => void }) {
   return (
     <div className="space-y-6 text-center">
@@ -239,12 +239,12 @@ function StepDone({ onFinish }: { onFinish: () => void }) {
         </motion.div>
       </div>
       <div>
-        <h2 className="text-[22px] font-semibold text-white mb-2">You're all set</h2>
-        <p className="text-[13.5px] text-white/40 leading-relaxed max-w-sm mx-auto">
-          Dyson is ingesting your stack. Ask your first WHY question — the graph starts building immediately.
+        <h2 className="text-[22px] font-semibold text-ink-1 mb-2">You're all set</h2>
+        <p className="text-[13.5px] text-ink-3 leading-relaxed max-w-sm mx-auto">
+          Dyson is ingesting your stack. Ask your first WHY question â€” the graph starts building immediately.
         </p>
       </div>
-      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5 text-left space-y-3">
+      <div className="rounded-lg border border-line bg-subtle p-5 text-left space-y-3">
         {[
           { label: 'Try asking the WHY Engine',     sub: '"Why did we build X?"' },
           { label: 'Check the Decision Log',         sub: 'Decisions detected so far' },
@@ -255,15 +255,15 @@ function StepDone({ onFinish }: { onFinish: () => void }) {
               <span className="text-[10px] font-mono font-bold text-primary">{i + 1}</span>
             </div>
             <div>
-              <p className="text-[13px] text-white/70">{item.label}</p>
-              <p className="text-[11px] text-white/30">{item.sub}</p>
+              <p className="text-[13px] text-ink-2">{item.label}</p>
+              <p className="text-[11px] text-ink-3">{item.sub}</p>
             </div>
           </div>
         ))}
       </div>
       <button
         onClick={onFinish}
-        className="w-full h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+        className="w-full h-11 rounded-xl bg-primary text-[13.5px] font-medium text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-sm"
       >
         Open Dyson <ArrowRight className="w-4 h-4" />
       </button>
@@ -271,7 +271,7 @@ function StepDone({ onFinish }: { onFinish: () => void }) {
   )
 }
 
-// ─── Shell ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Onboarding() {
   const navigate  = useNavigate()
   const [step, setStep] = useState(0)
@@ -286,14 +286,14 @@ export default function Onboarding() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#08080E] flex flex-col">
+    <div className="min-h-screen bg-canvas flex flex-col">
       {/* Nav */}
-      <div className="flex items-center justify-between px-8 py-5 border-b border-white/[0.05]">
+      <div className="flex items-center justify-between px-8 py-5 border-b border-line">
         <div className="flex items-center gap-2">
           <DysonMark size={20} className="text-primary" />
-          <span className="text-[13px] font-semibold text-white/80">Dyson</span>
+          <span className="text-[13px] font-semibold text-ink-1">Dyson</span>
         </div>
-        <span className="text-[12px] font-mono text-white/25">Step {step + 1} of {steps.length}</span>
+        <span className="text-[12px] font-mono text-ink-3">Step {step + 1} of {steps.length}</span>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
@@ -307,15 +307,15 @@ export default function Onboarding() {
                   'w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 transition-all duration-300',
                   i < step  ? 'bg-primary border-primary' :
                   i === step ? 'border-primary bg-primary/15' :
-                               'border-white/[0.10] bg-transparent'
+                               'border-line bg-transparent'
                 )}>
                   {i < step
-                    ? <Check className="w-3 h-3 text-white" />
-                    : <span className={cn('text-[9px] font-mono font-bold', i === step ? 'text-primary' : 'text-white/20')}>{i + 1}</span>
+                    ? <Check className="w-3 h-3 text-ink-1" />
+                    : <span className={cn('text-[9px] font-mono font-bold', i === step ? 'text-primary' : 'text-ink-4')}>{i + 1}</span>
                   }
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={cn('flex-1 h-px transition-all duration-300', i < step ? 'bg-primary/50' : 'bg-white/[0.06]')} />
+                  <div className={cn('flex-1 h-px transition-all duration-300', i < step ? 'bg-primary/50' : 'bg-subtle')} />
                 )}
               </div>
             ))}
@@ -346,3 +346,7 @@ function Check({ className }: { className?: string }) {
     </svg>
   )
 }
+
+
+
+

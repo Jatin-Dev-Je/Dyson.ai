@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+﻿import { forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
@@ -8,8 +8,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:   'bg-primary text-white hover:bg-primary-hover active:scale-[0.98] shadow-primary',
-        secondary: 'bg-white/[0.04] border border-[#2E2E2E] text-text-2 hover:bg-white/[0.07] hover:border-[#3D3D3D] hover:text-text-1',
-        ghost:     'text-text-3 hover:text-text-2 hover:bg-white/[0.05]',
+        secondary: 'bg-subtle border border-line text-ink-2 hover:bg-hover hover:border-line-strong hover:text-ink-1',
+        ghost:     'text-ink-3 hover:text-ink-2 hover:bg-hover',
         danger:    'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15',
         citation:  'bg-citation-dim text-citation border border-citation/20 hover:bg-citation/15',
       },
@@ -47,3 +47,4 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   )
 )
 Button.displayName = 'Button'
+

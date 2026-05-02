@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+﻿import { NavLink, Outlet } from 'react-router-dom'
 import { User, Building2, Plug, Users, CreditCard, Bell, Key, Shield, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,17 +17,17 @@ const nav = [
 export default function SettingsLayout() {
   return (
     <div className="flex h-full">
-      <div className="w-[200px] flex-shrink-0 border-r border-[#2E2E2E] px-2 py-5">
-        <p className="px-3 text-[10px] font-medium text-text-4 uppercase tracking-wider mb-2">Settings</p>
+      <div className="w-[200px] flex-shrink-0 border-r border-line px-2 py-5">
+        <p className="px-3 text-[10px] font-medium text-ink-4 uppercase tracking-wider mb-2">Settings</p>
         <nav className="space-y-0.5">
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end>
               {({ isActive }) => (
                 <div className={cn(
                   'flex items-center gap-2 px-3 py-[6px] rounded-md text-[13px] transition-all duration-100',
-                  isActive ? 'bg-white/[0.06] text-text-1' : 'text-text-3 hover:text-text-2 hover:bg-white/[0.04]'
+                  isActive ? 'bg-subtle text-ink-1' : 'text-ink-3 hover:text-ink-2 hover:bg-hover'
                 )}>
-                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-text-2' : 'text-text-4')} />
+                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-ink-2' : 'text-ink-4')} />
                   {label}
                 </div>
               )}
@@ -35,9 +35,10 @@ export default function SettingsLayout() {
           ))}
         </nav>
       </div>
-      <div className="flex-1 overflow-y-auto bg-[#141414]">
+      <div className="flex-1 overflow-y-auto bg-canvas">
         <Outlet />
       </div>
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Search, Zap, List, Users, Settings, Home, ArrowRight, Hash, FileText, Plug } from 'lucide-react'
@@ -36,7 +36,7 @@ export function CommandPalette() {
 
   const recent = [
     { id: 'r1', label: 'Why did we move to JWT auth?',     sub: 'WHY Engine query', icon: Zap,  action: () => nav('/app/why'), group: 'Recent' },
-    { id: 'r2', label: 'JWT auth replaces session tokens', sub: 'Decision · Backend', icon: List, action: () => nav('/app/decisions'), group: 'Recent' },
+    { id: 'r2', label: 'JWT auth replaces session tokens', sub: 'Decision Â· Backend', icon: List, action: () => nav('/app/decisions'), group: 'Recent' },
     { id: 'r3', label: 'What caused the Q3 incident?',     sub: 'WHY Engine query', icon: Zap,  action: () => nav('/app/why'), group: 'Recent' },
   ]
 
@@ -75,7 +75,7 @@ export function CommandPalette() {
 
   return (
     <>
-      {/* Trigger — invisible, activated by keyboard shortcut */}
+      {/* Trigger â€” invisible, activated by keyboard shortcut */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -92,19 +92,19 @@ export function CommandPalette() {
               exit  ={{ opacity: 0, scale: 0.97, y: -8 }}
               transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-[520px] mx-6 rounded-xl border border-[#3D3D3D] bg-[#1C1C1C] shadow-modal overflow-hidden"
+              className="w-full max-w-[520px] mx-6 rounded-xl border border-line-strong bg-surface shadow-modal overflow-hidden"
             >
               {/* Input */}
-              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#2E2E2E]">
-                <Search className="w-4 h-4 text-text-4 flex-shrink-0" />
+              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-line">
+                <Search className="w-4 h-4 text-ink-4 flex-shrink-0" />
                 <input
                   autoFocus
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Search pages, decisions, or ask a question..."
-                  className="flex-1 bg-transparent text-[14px] text-text-1 placeholder:text-text-4 outline-none"
+                  className="flex-1 bg-transparent text-[14px] text-ink-1 placeholder:text-ink-4 outline-none"
                 />
-                <kbd className="text-[10px] font-mono text-text-4 bg-white/[0.04] px-1.5 py-0.5 rounded border border-[#2E2E2E] flex-shrink-0">
+                <kbd className="text-[10px] font-mono text-ink-4 bg-subtle px-1.5 py-0.5 rounded border border-line flex-shrink-0">
                   ESC
                 </kbd>
               </div>
@@ -113,12 +113,12 @@ export function CommandPalette() {
               <div className="max-h-[360px] overflow-y-auto py-2">
                 {filtered.length === 0 ? (
                   <div className="px-4 py-8 text-center">
-                    <p className="text-[13px] text-text-3">No results for "{query}"</p>
+                    <p className="text-[13px] text-ink-3">No results for "{query}"</p>
                   </div>
                 ) : (
                   Object.entries(groups).map(([group, items]) => (
                     <div key={group} className="mb-1">
-                      <p className="px-4 py-1 text-[10px] font-medium text-text-4 uppercase tracking-wider">{group}</p>
+                      <p className="px-4 py-1 text-[10px] font-medium text-ink-4 uppercase tracking-wider">{group}</p>
                       {items.map((item) => {
                         const globalIdx = filtered.findIndex(f => f.id === item.id)
                         const Icon = item.icon
@@ -129,20 +129,20 @@ export function CommandPalette() {
                             onMouseEnter={() => setActive(globalIdx)}
                             className={cn(
                               'w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left',
-                              active === globalIdx ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                              active === globalIdx ? 'bg-subtle' : 'hover:bg-hover'
                             )}
                           >
                             <div className={cn(
                               'w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 transition-colors',
-                              active === globalIdx ? 'bg-primary/20 border border-primary/30' : 'bg-white/[0.04] border border-[#2E2E2E]'
+                              active === globalIdx ? 'bg-primary/20 border border-primary/30' : 'bg-subtle border border-line'
                             )}>
-                              <Icon className={cn('w-3.5 h-3.5', active === globalIdx ? 'text-primary' : 'text-text-3')} />
+                              <Icon className={cn('w-3.5 h-3.5', active === globalIdx ? 'text-primary' : 'text-ink-3')} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={cn('text-[13px] truncate', active === globalIdx ? 'text-text-1' : 'text-text-2')}>{item.label}</p>
-                              {item.sub && <p className="text-[11px] text-text-4 truncate">{item.sub}</p>}
+                              <p className={cn('text-[13px] truncate', active === globalIdx ? 'text-ink-1' : 'text-ink-2')}>{item.label}</p>
+                              {item.sub && <p className="text-[11px] text-ink-4 truncate">{item.sub}</p>}
                             </div>
-                            {active === globalIdx && <ArrowRight className="w-3.5 h-3.5 text-text-4 flex-shrink-0" />}
+                            {active === globalIdx && <ArrowRight className="w-3.5 h-3.5 text-ink-4 flex-shrink-0" />}
                           </button>
                         )
                       })}
@@ -152,11 +152,11 @@ export function CommandPalette() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center gap-4 px-4 py-2 border-t border-[#2E2E2E]">
-                {[['↑↓', 'navigate'], ['↵', 'open'], ['esc', 'close']].map(([key, label]) => (
+              <div className="flex items-center gap-4 px-4 py-2 border-t border-line">
+                {[['â†‘â†“', 'navigate'], ['â†µ', 'open'], ['esc', 'close']].map(([key, label]) => (
                   <div key={key} className="flex items-center gap-1.5">
-                    <kbd className="text-[10px] font-mono text-text-4 bg-white/[0.04] px-1.5 py-0.5 rounded border border-[#2E2E2E]">{key}</kbd>
-                    <span className="text-[11px] text-text-4">{label}</span>
+                    <kbd className="text-[10px] font-mono text-ink-4 bg-subtle px-1.5 py-0.5 rounded border border-line">{key}</kbd>
+                    <span className="text-[11px] text-ink-4">{label}</span>
                   </div>
                 ))}
               </div>
@@ -167,3 +167,4 @@ export function CommandPalette() {
     </>
   )
 }
+
