@@ -135,7 +135,8 @@ export async function buildApp() {
   await app.register(import('./modules/graph/graph.routes.js'),          { prefix: '/api/v1/graph' })
   await app.register(import('./modules/decisions/decisions.routes.js'),  { prefix: '/api/v1/decisions' })
 
-  await app.register(import('./modules/why/why.routes.js'),                 { prefix: '/api/v1/why' })
+  await app.register(import('./modules/memory/memory.routes.js'),           { prefix: '/api/v1/memory' })
+  await app.register(import('./modules/why/why.routes.js'),                 { prefix: '/api/v1/recall' })
   await app.register(import('./modules/search/search.routes.js'),           { prefix: '/api/v1/search' })
   await app.register(import('./modules/onboarding-packs/packs.routes.js'),  { prefix: '/api/v1/onboarding-packs' })
   await app.register(import('./modules/api-keys/apikeys.routes.js'),        { prefix: '/api/v1/api-keys' })

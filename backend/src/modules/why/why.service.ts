@@ -13,9 +13,12 @@ import { buildVerifiedAnswer } from './llm/response-validator.js'
 import { saveQuery, listQueryHistory, getQueryById, updateFeedback } from './why.repository.js'
 import type { WhyEngineResult, Citation, SourceNodeSummary } from './why.types.js'
 
-export const AskWhySchema = z.object({
+export const RecallSchema = z.object({
   question: z.string().min(3).max(1000).trim(),
 })
+
+// Backward compat alias used by agent routes
+export const AskWhySchema = RecallSchema
 
 export const HistoryQuerySchema = z.object({
   cursor: z.string().optional(),
@@ -26,7 +29,8 @@ export const FeedbackSchema = z.object({
   score: z.enum(['helpful', 'not_helpful']).transform(v => (v === 'helpful' ? 1 : -1) as 1 | -1),
 })
 
-export async function askWhy(
+// Primary export — "recall" is the product-facing name
+export async function recall(
   question: string,
   tenantId: string,
   userId: string,
@@ -34,7 +38,7 @@ export async function askWhy(
 ): Promise<WhyEngineResult> {
   const startMs = Date.now()
 
-  logger.info({ tenantId, questionLen: question.length }, 'WHY query started')
+  logger.info({ tenantId, questionLen: question.length }, 'memory recall started')
 
   const [vectorNodes, lexicalNodes] = await Promise.all([
     vectorSearch(question, tenantId, logger),
@@ -120,11 +124,14 @@ export async function askWhy(
       citationCount: citations.length,
       latencyMs,
     },
-    'WHY query complete'
+    'memory recall complete'
   )
 
   return { ...result, queryId: saved.id }
 }
+
+// Backward compat alias — agent routes and old tests use this name
+export const askWhy = recall
 
 export async function getHistory(
   tenantId: string,

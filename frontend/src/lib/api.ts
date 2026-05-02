@@ -1,9 +1,9 @@
-// ─── Storage keys ─────────────────────────────────────────────────────────
+﻿// â”€â”€â”€ Storage keys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ACCESS_KEY  = 'dyson_access_token'
 const REFRESH_KEY = 'dyson_refresh_token'
 const USER_KEY    = 'dyson_user'
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export type AuthUser = {
   id:        string
   tenantId:  string
@@ -19,7 +19,7 @@ export type TokenPair = {
   expiresIn:    number
 }
 
-// ─── Token helpers ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Token helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const tokens = {
   getAccess:      ()  => localStorage.getItem(ACCESS_KEY),
   getRefresh:     ()  => localStorage.getItem(REFRESH_KEY),
@@ -41,7 +41,7 @@ export const tokens = {
   },
 }
 
-// ─── Core fetch wrapper ────────────────────────────────────────────────────
+// â”€â”€â”€ Core fetch wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 let refreshPromise: Promise<void> | null = null
 
@@ -57,7 +57,7 @@ async function doRefresh(): Promise<void> {
 
   if (!res.ok) {
     tokens.clearAll()
-    throw new Error('Session expired — please log in again')
+    throw new Error('Session expired â€” please log in again')
   }
 
   const body = await res.json() as { data: TokenPair }
@@ -93,7 +93,7 @@ export async function apiFetch<T>(
 
   let res = await fetch(`/api/v1${path}`, { ...init, headers })
 
-  // Auto-refresh on 401 — deduplicated so concurrent requests don't fire multiple refreshes
+  // Auto-refresh on 401 â€” deduplicated so concurrent requests don't fire multiple refreshes
   if (res.status === 401 && !skipAuth && tokens.getRefresh()) {
     if (!refreshPromise) {
       refreshPromise = doRefresh().finally(() => { refreshPromise = null })
@@ -101,7 +101,7 @@ export async function apiFetch<T>(
     try {
       await refreshPromise
     } catch {
-      throw new ApiError('SESSION_EXPIRED', 'Session expired — please log in again', 401)
+      throw new ApiError('SESSION_EXPIRED', 'Session expired â€” please log in again', 401)
     }
     // Retry with new token
     headers['Authorization'] = `Bearer ${tokens.getAccess()!}`
@@ -115,7 +115,7 @@ export async function apiFetch<T>(
       const body = await res.json() as { error?: { code?: string; message?: string } }
       code    = body.error?.code    ?? code
       message = body.error?.message ?? message
-    } catch { /* json parse failed — keep defaults */ }
+    } catch { /* json parse failed â€” keep defaults */ }
     throw new ApiError(code, message, res.status)
   }
 
@@ -126,7 +126,7 @@ export async function apiFetch<T>(
   return body.data
 }
 
-// ─── Auth API ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const authApi = {
   async signup(input: {
@@ -202,7 +202,7 @@ export const authApi = {
   },
 }
 
-// ─── WHY Engine API ────────────────────────────────────────────────────────
+// â”€â”€â”€ WHY Engine API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type Citation = {
   nodeId:      string
@@ -212,7 +212,7 @@ export type Citation = {
   snippet:     string | null
 }
 
-export type WhyResult = {
+export type RecallResult = {
   queryId:      string
   question:     string
   answer:       string | null
@@ -223,9 +223,9 @@ export type WhyResult = {
   latencyMs:    number
 }
 
-export const whyApi = {
-  async ask(question: string): Promise<WhyResult> {
-    return apiFetch<WhyResult>('/why', {
+export const recallApi = {
+  async ask(question: string): Promise<RecallResult> {
+    return apiFetch<RecallResult>('/recall', {
       method: 'POST',
       body:   JSON.stringify({ question }),
     })
@@ -239,7 +239,7 @@ export const whyApi = {
   },
 }
 
-// ─── Decisions API ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Decisions API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type Decision = {
   id:            string
@@ -264,7 +264,7 @@ export const decisionsApi = {
   },
 }
 
-// ─── Users API ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Users API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const usersApi = {
   async updateMe(data: { name?: string; avatarUrl?: string | null }): Promise<AuthUser> {
@@ -277,7 +277,7 @@ export const usersApi = {
   },
 }
 
-// ─── Sessions API ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Sessions API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type Session = {
   id:        string
@@ -301,7 +301,7 @@ export const sessionsApi = {
   },
 }
 
-// ─── Search API ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Search API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type SearchResult = {
   nodeId:     string
@@ -318,3 +318,6 @@ export const searchApi = {
     return apiFetch<SearchResult[]>(`/search?${params}`)
   },
 }
+
+
+

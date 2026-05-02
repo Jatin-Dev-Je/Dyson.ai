@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dyson — Context infrastructure for engineering teams</title>
+<meta name="description" content="Others store what. Dyson explains why. A tenant-private context graph that turns Slack, GitHub, Notion and Linear into one cited memory of every decision your team made." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07070A;
+    --bg-2:#0C0C12;
+    --surface:#101018;
+    --surface-2:#15151F;
+    --line:rgba(255,255,255,0.07);
+    --line-2:rgba(255,255,255,0.12);
+    --text:#F4F4F6;
+    --muted:#9C9CA8;
+    --dim:#6A6A78;
+    --accent:#7CE7C8;
+    --accent-2:#5BB3FF;
+    --warn:#F0B872;
+    --slack:#E01E5A;
+    --r-md:8px;
+    --r-lg:14px;
+    --r-xl:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+  ::selection{background:var(--accent);color:#06141B}
+
+  /* ============ animated background ============ */
+  .bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .bg::before{
+    content:"";position:absolute;inset:-20%;
+    background:
+      radial-gradient(700px 500px at 18% 12%, rgba(124,231,200,0.12), transparent 60%),
+      radial-gradient(900px 700px at 85% 30%, rgba(91,179,255,0.10), transparent 60%),
+      radial-gradient(800px 600px at 50% 95%, rgba(240,184,114,0.06), transparent 60%);
+    filter:blur(20px);
+    animation:drift 22s ease-in-out infinite alternate;
+  }
+  .bg::after{
+    content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
+    -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
+  }
+  @keyframes drift{
+    0%{transform:translate3d(-2%,-1%,0) scale(1)}
+    100%{transform:translate3d(3%,2%,0) scale(1.05)}
+  }
+  .spotlight{
+    position:fixed;width:600px;height:600px;border-radius:50%;
+    background:radial-gradient(circle, rgba(124,231,200,0.10), transparent 60%);
+    transform:translate(-50%,-50%);pointer-events:none;z-index:1;
+    transition:opacity .4s ease;mix-blend-mode:screen;
+  }
+
+  /* ============ layout ============ */
+  .wrap{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 28px}
+  section{position:relative;z-index:2}
+
+  /* ============ header ============ */
+  header{
+    position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(14px);
+    -webkit-backdrop-filter:saturate(140%) blur(14px);
+    background:rgba(7,7,10,0.55);border-bottom:0.5px solid var(--line);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand svg.mark{width:28px;height:28px;color:var(--text)}
+  .brand .word{font-weight:600;letter-spacing:-0.02em;font-size:19px}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{
+    padding:8px 14px;border-radius:var(--r-md);font-size:14px;color:var(--muted);
+    transition:color .15s ease, background .15s ease;
+  }
+  .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+  .nav-cta{display:flex;align-items:center;gap:8px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 16px;border-radius:var(--r-md);font-size:14px;font-weight:500;
+    border:0.5px solid var(--line-2);transition:all .15s ease;
+    background:rgba(255,255,255,0.03);
+  }
+  .btn:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.2)}
+  .btn-primary{
+    background:var(--text);color:#0A0A10;border-color:var(--text);
+  }
+  .btn-primary:hover{background:#fff;border-color:#fff}
+  .btn-ghost{border-color:transparent;background:transparent;color:var(--muted)}
+  .btn-ghost:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+
+  /* ============ hero ============ */
+  .hero{padding:120px 0 80px;text-align:center}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 14px 6px 8px;border:0.5px solid var(--line-2);border-radius:999px;
+    font-size:12.5px;color:var(--muted);background:rgba(255,255,255,0.03);
+    margin-bottom:28px;
+  }
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(124,231,200,0.18)}
+  h1.headline{
+    font-size:clamp(40px,6.4vw,84px);
+    font-weight:500;letter-spacing:-0.045em;line-height:1.02;margin:0 0 22px;
+    background:linear-gradient(180deg,#fff 0%, #C9C9D2 70%, #8A8A95 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  h1.headline em{font-style:normal;color:var(--accent);font-weight:500;background:none;-webkit-text-fill-color:var(--accent)}
+  .sub{
+    max-width:660px;margin:0 auto 36px;color:var(--muted);
+    font-size:clamp(16px,1.4vw,18px);line-height:1.55;
+  }
+  .hero-ctas{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+  .hero-ctas .btn{padding:12px 22px;font-size:14.5px}
+  .hero-meta{font-size:12.5px;color:var(--dim);display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .hero-meta b{color:var(--muted);font-weight:500}
+
+  /* ============ logo strip ============ */
+  .strip{padding:64px 0 24px;text-align:center}
+  .strip-label{
+    font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:var(--dim);
+    margin:0 0 24px;font-weight:500;
+  }
+  .logos{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;opacity:0.78}
+  .logos .logo{display:flex;align-items:center;gap:10px;color:var(--muted);font-weight:500;font-size:15.5px;letter-spacing:-0.01em}
+  .logos .logo svg{width:22px;height:22px;flex-shrink:0}
+
+  /* ============ product showcase ============ */
+  .showcase{padding:80px 0 40px}
+  .showcase-frame{
+    background:linear-gradient(180deg, var(--surface), var(--bg-2));
+    border:0.5px solid var(--line-2);border-radius:var(--r-xl);
+    padding:18px;box-shadow:0 60px 120px -40px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,231,200,0.04) inset;
+    position:relative;
+  }
+  .showcase-frame::before{
+    content:"";position:absolute;inset:-1px;border-radius:var(--r-xl);
+    background:linear-gradient(180deg, rgba(124,231,200,0.25), transparent 30%);
+    -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);
+    -webkit-mask-composite:xor;mask-composite:exclude;padding:1px;pointer-events:none;
+  }
+  .product{
+    background:var(--bg-2);border-radius:calc(var(--r-xl) - 6px);
+    overflow:hidden;display:grid;grid-template-columns:240px 1fr;min-height:540px;
+  }
+  /* product sidebar */
+  .p-side{padding:18px 14px;border-right:0.5px solid var(--line)}
+  .p-side .group{margin-bottom:22px}
+  .p-side .group-label{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--dim);padding:0 8px;margin-bottom:8px;font-weight:500}
+  .p-side .item{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;color:var(--muted);font-size:13.5px;cursor:default}
+  .p-side .item.active{background:rgba(255,255,255,0.05);color:var(--text)}
+  .p-side .item svg{width:14px;height:14px;flex-shrink:0;opacity:0.75}
+  .p-side .item .count{margin-left:auto;font-size:11.5px;color:var(--dim);background:rgba(255,255,255,0.04);padding:1px 6px;border-radius:4px}
+  /* product main */
+  .p-main{display:flex;flex-direction:column}
+  .p-bar{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:0.5px solid var(--line)}
+  .p-bar .traffic{display:flex;gap:6px}
+  .p-bar .traffic span{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.08)}
+  .p-bar .search{flex:1;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:0.5px solid var(--line);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--muted)}
+  .p-bar .search svg{width:13px;height:13px;color:var(--dim)}
+  .p-bar .pill-c{font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(124,231,200,0.10);color:var(--accent);border:0.5px solid rgba(124,231,200,0.25)}
+  .p-body{padding:24px 28px 28px;overflow:hidden}
+  .q{font-size:13px;color:var(--dim);margin:0 0 6px;font-family:'JetBrains Mono',monospace}
+  .q-text{font-size:18px;color:var(--text);margin:0 0 18px;font-weight:500;letter-spacing:-0.01em}
+  .answer{font-size:14.5px;line-height:1.65;color:#D9D9E0;margin:0 0 22px}
+  .answer .cite{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:18px;height:18px;padding:0 5px;
+    background:rgba(124,231,200,0.15);color:var(--accent);
+    border:0.5px solid rgba(124,231,200,0.3);border-radius:5px;
+    font-size:10.5px;font-weight:600;font-family:'JetBrains Mono',monospace;
+    margin:0 2px;cursor:pointer;vertical-align:1px;transition:background .15s ease;
+  }
+  .answer .cite:hover{background:rgba(124,231,200,0.25)}
+  .answer mark{background:rgba(91,179,255,0.12);color:#BFDDFB;padding:1px 4px;border-radius:3px}
+  .meta-row{display:flex;align-items:center;gap:16px;padding:12px 0;border-top:0.5px dashed var(--line);border-bottom:0.5px dashed var(--line);margin-bottom:18px}
+  .meta-row .m{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+  .meta-row .m b{color:var(--text);font-weight:500}
+  .conf{display:inline-flex;align-items:center;gap:6px}
+  .conf .bar{width:64px;height:4px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden}
+  .conf .bar i{display:block;height:100%;width:91%;background:var(--accent);border-radius:2px}
+  .citations{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .src{
+    display:flex;gap:10px;padding:11px 12px;
+    background:rgba(255,255,255,0.025);border:0.5px solid var(--line);border-radius:10px;
+    transition:background .15s ease,border-color .15s ease;cursor:pointer;
+  }
+  .src:hover{background:rgba(255,255,255,0.05);border-color:var(--line-2)}
+  .src .ico{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,0.05)}
+  .src .ico svg{width:16px;height:16px}
+  .src .t{font-size:12.5px;color:var(--text);font-weight:500;margin:0 0 3px;line-height:1.35}
+  .src .s{font-size:11.5px;color:var(--dim);margin:0;font-family:'JetBrains Mono',monospace}
+
+  /* ============ value props ============ */
+  .props{padding:120px 0 40px}
+  .section-title{text-align:center;max-width:680px;margin:0 auto 56px}
+  .section-eyebrow{font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px;font-weight:500}
+  .section-h{font-size:clamp(30px,3.6vw,46px);font-weight:500;letter-spacing:-0.035em;line-height:1.1;margin:0 0 16px;color:var(--text)}
+  .section-p{color:var(--muted);font-size:16px;line-height:1.6;margin:0}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{
+    background:rgba(255,255,255,0.025);border:0.5px solid var(--line);border-radius:var(--r-lg);
+    padding:26px 24px 28px;transition:transform .25s ease, border-color .25s ease, background .25s ease;
+  }
+  .card:hover{transform:translateY(-2px);border-color:var(--line-2);background:rgba(255,255,255,0.04)}
+  .card .num{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);
+    margin:0 0 18px;letter-spacing:0.05em;
+  }
+  .card h3{font-size:18px;font-weight:500;letter-spacing:-0.015em;margin:0 0 10px;color:var(--text)}
+  .card p{font-size:14px;color:var(--muted);line-height:1.6;margin:0}
+  .card .ico-block{width:38px;height:38px;border-radius:9px;background:rgba(124,231,200,0.10);border:0.5px solid rgba(124,231,200,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+  .card .ico-block svg{width:18px;height:18px;color:var(--accent)}
+
+  /* ============ how it works ============ */
+  .how{padding:80px 0}
+  .pipe{
+    background:rgba(255,255,255,0.02);border:0.5px solid var(--line);border-radius:var(--r-xl);
+    padding:36px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-items:stretch;position:relative;
+  }
+  .step{display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(255,255,255,0.02);border:0.5px solid var(--line);border-radius:var(--r-lg);min-height:200px;position:relative}
+  .step .label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.08em}
+  .step h4{font-size:16px;font-weight:500;letter-spacing:-0.01em;margin:0;color:var(--text)}
+  .step p{font-size:13px;color:var(--muted);line-height:1.55;margin:auto 0 0}
+  .step .stack{display:flex;gap:6px;flex-wrap:wrap}
+  .step .chip{display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;background:rgba(255,255,255,0.04);border:0.5px solid var(--line);font-size:11px;color:var(--muted)}
+  .step .chip svg{width:11px;height:11px}
+
+  /* ============ trust block ============ */
+  .trust{padding:80px 0}
+  .trust-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}
+  .trust-card{background:rgba(255,255,255,0.025);border:0.5px solid var(--line);border-radius:var(--r-xl);padding:36px}
+  .trust-card .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .trust-card .head .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .trust-card .head span{font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)}
+  .trust-card h3{font-size:24px;font-weight:500;letter-spacing:-0.02em;margin:0 0 12px;color:var(--text)}
+  .trust-card p{font-size:14.5px;color:var(--muted);line-height:1.6;margin:0 0 22px}
+  .quote{
+    font-family:'Inter',serif;font-size:15px;line-height:1.65;color:#DDDEE3;
+    border-left:2px solid var(--accent);padding:6px 0 6px 16px;margin:0 0 14px;
+  }
+  .quote-by{font-size:12.5px;color:var(--dim)}
+
+  /* ============ cta ============ */
+  .cta{padding:80px 0 40px}
+  .cta-card{
+    text-align:center;border:0.5px solid var(--line-2);border-radius:var(--r-xl);
+    padding:64px 32px;background:radial-gradient(ellipse 60% 80% at 50% 0%, rgba(124,231,200,0.10), transparent 70%), var(--bg-2);
+    position:relative;overflow:hidden;
+  }
+  .cta-card h2{font-size:clamp(28px,3.4vw,44px);font-weight:500;letter-spacing:-0.035em;line-height:1.1;margin:0 0 14px;color:var(--text)}
+  .cta-card p{color:var(--muted);font-size:16px;margin:0 auto 26px;max-width:520px}
+
+  /* ============ footer ============ */
+  footer{padding:60px 0 28px;border-top:0.5px solid var(--line);margin-top:60px}
+  .foot{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px}
+  .foot h5{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);margin:0 0 14px;font-weight:500}
+  .foot a{display:block;color:var(--muted);font-size:14px;padding:5px 0;transition:color .15s}
+  .foot a:hover{color:var(--text)}
+  .foot p{color:var(--dim);font-size:13.5px;line-height:1.55;margin:14px 0 0;max-width:280px}
+  .foot-end{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--dim);padding-top:24px;border-top:0.5px solid var(--line)}
+
+  /* ============ responsive ============ */
+  @media (max-width:880px){
+    .nav-links{display:none}
+    .product{grid-template-columns:1fr}
+    .p-side{display:none}
+    .grid-3{grid-template-columns:1fr}
+    .pipe{grid-template-columns:1fr 1fr}
+    .trust-grid{grid-template-columns:1fr}
+    .citations{grid-template-columns:1fr}
+    .foot{grid-template-columns:1fr 1fr}
+  }
+
+  /* fade-in */
+  .fade{opacity:0;transform:translateY(14px);transition:opacity .9s ease, transform .9s ease}
+  .fade.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true"></div>
+<div class="spotlight" id="spot" aria-hidden="true"></div>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#">
+      <!-- Dyson "d" mark -->
+      <svg class="mark" viewBox="0 0 120 120" fill="currentColor" aria-label="Dyson">
+        <path d="M84 8 h12 v92 a12 12 0 0 1 -12 12 h-2 v-12 h2 V40 a40 40 0 1 0 0 40 v8 a4 4 0 0 1 -4 4 H46 a40 40 0 1 1 38 -52 V8 z M44 60 a16 16 0 1 0 32 0 a16 16 0 1 0 -32 0 z" fill-rule="evenodd"/>
+      </svg>
+      <span class="word">dyson</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#product">Product</a>
+      <a href="#how">How it works</a>
+      <a href="#trust">Trust</a>
+      <a href="#" >Customers</a>
+      <a href="#" >Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost">Sign in</button>
+      <a href="#cta" class="btn btn-primary">Request access &rarr;</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="pill fade">
+      <span class="dot"></span>
+      <span>Backed by Y Combinator · Closed beta · S26</span>
+    </div>
+    <h1 class="headline fade">
+      Others store <span style="color:#5A5A66">what</span>.<br/>
+      Dyson explains <em>why</em>.
+    </h1>
+    <p class="sub fade">
+      The context graph for engineering teams. Dyson connects Slack, GitHub, Notion and Linear into one cited memory of every decision your team has ever made &mdash; with sources, confidence scores and one-click access to the original event.
+    </p>
+    <div class="hero-ctas fade">
+      <a href="#cta" class="btn btn-primary">Get early access &rarr;</a>
+      <a href="#product" class="btn">Watch a 90-second demo</a>
+    </div>
+    <div class="hero-meta fade">
+      <span><b>SOC 2 Type II</b> in progress</span>
+      <span>&middot;</span>
+      <span><b>Tenant-private</b> by design</span>
+      <span>&middot;</span>
+      <span><b>Permission-aware</b> retrieval</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTEGRATIONS STRIP ============ -->
+<section class="strip wrap">
+  <p class="strip-label">Connects to the tools your team already lives in</p>
+  <div class="logos">
+    <div class="logo">
+      <!-- Slack -->
+      <svg viewBox="0 0 24 24" aria-label="Slack"><path fill="#E01E5A" d="M5 15a2 2 0 1 1-2-2h2v2zm1 0a2 2 0 0 1 4 0v5a2 2 0 1 1-4 0v-5z"/><path fill="#36C5F0" d="M9 5a2 2 0 1 1 2-2v2H9zm0 1a2 2 0 0 1 0 4H4a2 2 0 1 1 0-4h5z"/><path fill="#2EB67D" d="M19 9a2 2 0 1 1 2 2h-2V9zm-1 0a2 2 0 0 1-4 0V4a2 2 0 1 1 4 0v5z"/><path fill="#ECB22E" d="M15 19a2 2 0 1 1-2 2v-2h2zm0-1a2 2 0 0 1 0-4h5a2 2 0 1 1 0 4h-5z"/></svg>
+      Slack
+    </div>
+    <div class="logo">
+      <!-- GitHub -->
+      <svg viewBox="0 0 24 24" aria-label="GitHub" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.8 10.8 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.37-5.25 5.66.41.36.78 1.05.78 2.13v3.16c0 .31.2.67.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+      GitHub
+    </div>
+    <div class="logo">
+      <!-- Notion -->
+      <svg viewBox="0 0 24 24" aria-label="Notion" fill="currentColor"><path d="M4.46 3.42L15.7 2.6c1.39-.12 1.74-.04 2.62.6l3.59 2.53c.6.44.8.56.8 1.04V20.5c0 .88-.32 1.4-1.43 1.48L7.85 22.91c-.85.04-1.25-.08-1.7-.64l-2.65-3.45C2.92 18.16 2.7 17.6 2.7 16.95V4.97c0-.71.32-1.31 1.76-1.55zm10.86 1.2l-9.9.72c-.5.04-.6.28-.39.48l1.95 1.41c.32.24.6.28 1.07.24l9.9-.6c.4-.04.16-.24-.04-.32l-2.59-1.93zM6.4 9.04v9.42c0 .52.24.72.84.68l10.9-.64c.6-.04.68-.4.68-.84V8.32c0-.44-.16-.68-.52-.64l-11.34.66c-.4.04-.56.24-.56.7zm9.85.92c.06.28 0 .56-.28.6l-.52.1v7.7c-.46.24-.88.4-1.24.4-.56 0-.7-.18-1.13-.7L9.13 11.6v5.66l1.07.24s0 .6-.84.6l-2.31.14c-.06-.14 0-.5.24-.56l.6-.16V11.5l-.84-.06c-.06-.28.1-.7.54-.74l2.49-.16 3.5 5.36V11.1l-.9-.1c-.06-.34.18-.6.5-.62l2.27-.14z"/></svg>
+      Notion
+    </div>
+    <div class="logo">
+      <!-- Linear -->
+      <svg viewBox="0 0 24 24" aria-label="Linear" fill="currentColor"><path d="M.4 13.93a12 12 0 0 0 9.66 9.67L.4 13.93zm-.04-3.43L13.5 23.65a12 12 0 0 0 3.04-.83L1.18 7.46a12 12 0 0 0-.82 3.04zm2.04-5.4L18.9 21.6a12 12 0 0 0 2.34-1.79L4.18 2.74a12 12 0 0 0-1.78 2.36zM6.43 1.39a12 12 0 0 1 16.18 16.18L6.43 1.39z"/></svg>
+      Linear
+    </div>
+    <div class="logo">
+      <!-- Cursor -->
+      <svg viewBox="0 0 24 24" aria-label="Cursor" fill="currentColor"><path d="M12 0L23.4 6.6v10.8L12 24 .6 17.4V6.6L12 0zm0 4.8L4.2 9.3v9l7.8 4.5 7.8-4.5v-9L12 4.8zm0 1.5l6.5 3.75v7.5L12 21.3 5.5 17.55v-7.5L12 6.3z"/></svg>
+      Cursor
+    </div>
+    <div class="logo">
+      <!-- Asana -->
+      <svg viewBox="0 0 24 24" aria-label="Asana"><circle cx="12" cy="6" r="4" fill="#F06A6A"/><circle cx="6" cy="16" r="4" fill="#F06A6A"/><circle cx="18" cy="16" r="4" fill="#F06A6A"/></svg>
+      Asana
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRODUCT SHOWCASE ============ -->
+<section class="showcase wrap" id="product">
+  <div class="section-title fade" style="margin-bottom:36px">
+    <p class="section-eyebrow">The WHY engine</p>
+    <h2 class="section-h">Every answer carries its receipts.</h2>
+    <p class="section-p">Ask why a decision was made. Get a cited explanation, a confidence score, and one-click access to the exact Slack thread, PR or doc that produced it. If Dyson isn't sure, it doesn't guess &mdash; it shows you the events and lets you decide.</p>
+  </div>
+
+  <div class="showcase-frame fade">
+    <div class="product">
+      <aside class="p-side">
+        <div class="group">
+          <div class="group-label">Workspaces</div>
+          <div class="item active">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zm0 8.5L4.6 7 12 3.5 19.4 7 12 10.5zm0 3L2 8.5V17l10 5 10-5V8.5l-10 5z"/></svg>
+            Acme Robotics
+            <span class="count">7.4k</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-label">Quick asks</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17l-5-5 1.4-1.4L9 14.2l9.6-9.6L20 6l-11 11z"/></svg> Who decided this?</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 17h-2v-6h2zm0-8h-2V7h2z"/></svg> Why was this changed?</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17h18v2H3v-2zm0-4h18v2H3v-2zm0-4h18v2H3V9zm0-4h18v2H3V5z"/></svg> Reconstruct timeline</div>
+          <div class="item"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 5v6c0 5 3.4 9.6 8 11 4.6-1.4 8-6 8-11V5l-8-3z"/></svg> Onboard a new hire</div>
+        </div>
+        <div class="group">
+          <div class="group-label">Recent</div>
+          <div class="item">checkout-rate regression</div>
+          <div class="item">pgvector → hnsw migration</div>
+          <div class="item">why we dropped Notion</div>
+        </div>
+      </aside>
+
+      <main class="p-main">
+        <div class="p-bar">
+          <div class="traffic"><span></span><span></span><span></span></div>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 2a8 8 0 1 1-5.3 14L1 19.7 2.3 21l3.7-3.7A8 8 0 0 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/></svg>
+            Why did we move auth off Auth0 in Q2?
+          </div>
+          <span class="pill-c">cmd · K</span>
+        </div>
+
+        <div class="p-body">
+          <p class="q">/why · query 0192</p>
+          <p class="q-text">Why did we move auth off Auth0 in Q2?</p>
+
+          <p class="answer">
+            The team migrated off Auth0 between <mark>April 14&ndash;28, 2026</mark> after Auth0's tiered pricing pushed projected annual cost above <mark>$140k</mark> at current MAU growth<a class="cite">1</a>. The decision crystallised in <mark>#eng-platform</mark> on April 16, where Maya proposed a self-hosted Hanko + Postgres stack<a class="cite">2</a>. PR <mark>#3421</mark> shipped the cutover behind a feature flag, with rollback retained for 30 days<a class="cite">3</a>. Linear ticket <mark>ENG-812</mark> tracked the migration. No customer-facing incidents were reported during the window.
+          </p>
+
+          <div class="meta-row">
+            <span class="m">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm.5-13H11v6l5.2 3.1.8-1.3-4.5-2.6V7z"/></svg>
+              <b>1.2s</b> · 18 events scanned
+            </span>
+            <span class="m conf">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 17l-5-5 1.4-1.4L9 14.2l9.6-9.6L20 6l-11 11z"/></svg>
+              Confidence <b>0.91</b>
+              <span class="bar"><i></i></span>
+            </span>
+            <span class="m">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v3h1a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h1V5a4 4 0 0 1 4-4zm2 7V5a2 2 0 0 0-4 0v3h4z"/></svg>
+              <b>3 of 3</b> sources accessible to you
+            </span>
+          </div>
+
+          <div class="citations">
+            <div class="src">
+              <div class="ico"><svg viewBox="0 0 24 24"><path fill="#E01E5A" d="M5 15a2 2 0 1 1-2-2h2v2zm1 0a2 2 0 0 1 4 0v5a2 2 0 1 1-4 0v-5z"/><path fill="#36C5F0" d="M9 5a2 2 0 1 1 2-2v2H9zm0 1a2 2 0 0 1 0 4H4a2 2 0 1 1 0-4h5z"/><path fill="#2EB67D" d="M19 9a2 2 0 1 1 2 2h-2V9zm-1 0a2 2 0 0 1-4 0V4a2 2 0 1 1 4 0v5z"/><path fill="#ECB22E" d="M15 19a2 2 0 1 1-2 2v-2h2zm0-1a2 2 0 0 1 0-4h5a2 2 0 1 1 0 4h-5z"/></svg></div>
+              <div>
+                <p class="t">#eng-platform &mdash; "Auth0 pricing forecast at 200k MAU&hellip;"</p>
+                <p class="s">slack · April 14, 2026 · @maya.r</p>
+              </div>
+            </div>
+            <div class="src">
+              <div class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.8 10.8 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.37-5.25 5.66.41.36.78 1.05.78 2.13v3.16c0 .31.2.67.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg></div>
+              <div>
+                <p class="t">PR #3421 &mdash; replace auth0 sdk with hanko adapter</p>
+                <p class="s">github · April 28, 2026 · 47 commits</p>
+              </div>
+            </div>
+            <div class="src">
+              <div class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.4 13.93a12 12 0 0 0 9.66 9.67L.4 13.93zm0-3.43L13.5 23.65a12 12 0 0 0 3.04-.83L1.18 7.46a12 12 0 0 0-.82 3.04zm2.04-5.4L18.9 21.6a12 12 0 0 0 2.34-1.79L4.18 2.74a12 12 0 0 0-1.78 2.36zM6.43 1.39a12 12 0 0 1 16.18 16.18L6.43 1.39z"/></svg></div>
+              <div>
+                <p class="t">ENG-812 &mdash; Migrate identity layer off Auth0</p>
+                <p class="s">linear · spec doc + 9 sub-tickets</p>
+              </div>
+            </div>
+            <div class="src" style="opacity:0.55">
+              <div class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.46 3.42L15.7 2.6c1.39-.12 1.74-.04 2.62.6l3.59 2.53c.6.44.8.56.8 1.04V20.5c0 .88-.32 1.4-1.43 1.48L7.85 22.91c-.85.04-1.25-.08-1.7-.64l-2.65-3.45C2.92 18.16 2.7 17.6 2.7 16.95V4.97c0-.71.32-1.31 1.76-1.55z"/></svg></div>
+              <div>
+                <p class="t">RFC: identity provider strategy 2026</p>
+                <p class="s">notion · 2 sources hidden &mdash; outside your access</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VALUE PROPS ============ -->
+<section class="props wrap">
+  <div class="section-title fade">
+    <p class="section-eyebrow">Why this exists</p>
+    <h2 class="section-h">The why dies the moment the Slack thread scrolls.</h2>
+    <p class="section-p">Most context lives in messages no one re-reads, PR descriptions no one writes, and meetings no one transcribed. Dyson is the system of record for the reasoning underneath your team's work.</p>
+  </div>
+
+  <div class="grid-3">
+    <div class="card fade">
+      <div class="ico-block"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 5h2v6l5 3-1 1.7-6-3.7V7z"/></svg></div>
+      <p class="num">/ 01</p>
+      <h3>Cut post-mortem time by 70%</h3>
+      <p>Reconstruct what happened, who decided what, and what trade-offs were on the table &mdash; in minutes instead of three engineers spending a Friday in retrospective.</p>
+    </div>
+    <div class="card fade">
+      <div class="ico-block"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg></div>
+      <p class="num">/ 02</p>
+      <h3>Ramp new engineers in days</h3>
+      <p>Auto-generated onboarding packs explain why the codebase looks the way it does &mdash; not just what's in it. Every claim cited, every detour explained.</p>
+    </div>
+    <div class="card fade">
+      <div class="ico-block"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l3.6 7.3L24 9.3l-6 5.8 1.4 8.2L12 19.5l-7.4 3.8L6 15.1 0 9.3l8.4-1z"/></svg></div>
+      <p class="num">/ 03</p>
+      <h3>Trust by construction</h3>
+      <p>Citations on every claim, calibrated confidence on every answer, and permission-aware retrieval that never surfaces a Slack message you can't see in Slack.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how wrap" id="how">
+  <div class="section-title fade">
+    <p class="section-eyebrow">Architecture</p>
+    <h2 class="section-h">From raw events to causal answers.</h2>
+    <p class="section-p">A four-stage pipeline turns the noise of your work stack into a tenant-private context graph &mdash; then walks the graph to compose answers backed by the exact events that produced them.</p>
+  </div>
+
+  <div class="pipe fade">
+    <div class="step">
+      <span class="label">01 / Ingest</span>
+      <h4>Stream every event</h4>
+      <p>Slack, GitHub, Notion, Linear and meetings flow in via signed webhooks. Idempotent on external ID &mdash; replay is always safe.</p>
+      <div class="stack">
+        <span class="chip">Pub/Sub</span><span class="chip">Cloud Run</span>
+      </div>
+    </div>
+    <div class="step">
+      <span class="label">02 / Process</span>
+      <h4>Detect decisions</h4>
+      <p>Entity extraction, decision detection, embedding generation. Edges are scored, not assumed &mdash; confidence is propagated, not invented.</p>
+      <div class="stack">
+        <span class="chip">Gemini Flash</span><span class="chip">Cohere v3</span>
+      </div>
+    </div>
+    <div class="step">
+      <span class="label">03 / Graph</span>
+      <h4>Link causally</h4>
+      <p>A typed temporal graph stores leads-to, decided-by, supersedes &mdash; the edges that turn a feed into a story.</p>
+      <div class="stack">
+        <span class="chip">Postgres</span><span class="chip">pgvector</span>
+      </div>
+    </div>
+    <div class="step">
+      <span class="label">04 / Answer</span>
+      <h4>Causal RAG</h4>
+      <p>Hybrid retrieval and graph-walk planning select the events. The LLM only composes &mdash; it never invents facts about your company.</p>
+      <div class="stack">
+        <span class="chip">Causal RAG</span><span class="chip">MCP-ready</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRUST ============ -->
+<section class="trust wrap" id="trust">
+  <div class="trust-grid">
+    <div class="trust-card fade">
+      <div class="head"><span class="dot"></span><span>The trust contract</span></div>
+      <h3>A wrong answer shipped fast destroys trust permanently.</h3>
+      <p>Every WHY Engine response is gated by a 0.72 confidence floor. Below the threshold Dyson does not compose an explanation &mdash; it returns the raw events and lets the engineer draw their own conclusion. "I don't know" is a correct output, and we treat it as one.</p>
+      <p style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <span class="chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;background:rgba(255,255,255,0.04);border:0.5px solid var(--line);font-size:12px;color:var(--muted)">Tenant-isolated</span>
+        <span class="chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;background:rgba(255,255,255,0.04);border:0.5px solid var(--line);font-size:12px;color:var(--muted)">Permission-aware retrieval</span>
+        <span class="chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;background:rgba(255,255,255,0.04);border:0.5px solid var(--line);font-size:12px;color:var(--muted)">No cross-tenant embeddings</span>
+        <span class="chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;background:rgba(255,255,255,0.04);border:0.5px solid var(--line);font-size:12px;color:var(--muted)">Encrypted OAuth tokens</span>
+      </p>
+    </div>
+    <div class="trust-card fade">
+      <div class="head"><span class="dot"></span><span>Built for engineering teams</span></div>
+      <p class="quote">&ldquo;A junior engineer asked why we use Cohere over OpenAI for embeddings. Dyson surfaced a six-month-old design review thread I'd forgotten existed. Saved me an hour and a wrong answer.&rdquo;</p>
+      <p class="quote-by">&mdash; Maya R., Staff Engineer · 80-person fintech</p>
+      <p class="quote">&ldquo;Onboarding pack reads like a senior engineer wrote it. Every &lsquo;we tried this and it didn't work because&hellip;&rsquo; is cited. New hires actually trust it.&rdquo;</p>
+      <p class="quote-by">&mdash; Daniel C., VP Eng · YC W24 batch</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta wrap" id="cta">
+  <div class="cta-card fade">
+    <h2>Stop re-explaining the past.</h2>
+    <p>Dyson is in closed beta with engineering teams of 30&ndash;200. Three integration calls, one week to value, and your context graph starts compounding from day one.</p>
+    <div class="hero-ctas">
+      <a href="#" class="btn btn-primary">Request access &rarr;</a>
+      <a href="#" class="btn">Read the technical brief</a>
+    </div>
+    <p style="margin-top:24px;font-size:12px;color:var(--dim)">No credit card. SOC 2 Type II in progress. Annual contracts only at GA.</p>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <div class="brand">
+          <svg class="mark" viewBox="0 0 120 120" fill="currentColor" style="width:24px;height:24px">
+            <path d="M84 8 h12 v92 a12 12 0 0 1 -12 12 h-2 v-12 h2 V40 a40 40 0 1 0 0 40 v8 a4 4 0 0 1 -4 4 H46 a40 40 0 1 1 38 -52 V8 z M44 60 a16 16 0 1 0 32 0 a16 16 0 1 0 -32 0 z" fill-rule="evenodd"/>
+          </svg>
+          <span class="word" style="font-size:17px">dyson</span>
+        </div>
+        <p>Context infrastructure for engineering teams. Others store what. Dyson explains why.</p>
+      </div>
+      <div>
+        <h5>Product</h5>
+        <a href="#">WHY engine</a>
+        <a href="#">Post-mortems</a>
+        <a href="#">Onboarding</a>
+        <a href="#">Agent API</a>
+      </div>
+      <div>
+        <h5>Company</h5>
+        <a href="#">About</a>
+        <a href="#">Careers · 4</a>
+        <a href="#">Manifesto</a>
+        <a href="#">Press kit</a>
+      </div>
+      <div>
+        <h5>Resources</h5>
+        <a href="#">Docs</a>
+        <a href="#">Trust &amp; security</a>
+        <a href="#">Changelog</a>
+        <a href="#">Status</a>
+      </div>
+    </div>
+    <div class="foot-end">
+      <span>&copy; 2026 Dyson Labs, Inc.</span>
+      <span>&middot; Built in San Francisco &middot; Backed by Y Combinator</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // mouse spotlight
+  const spot = document.getElementById('spot');
+  let mx = window.innerWidth/2, my = window.innerHeight*0.3;
+  let tx = mx, ty = my;
+  window.addEventListener('mousemove', (e)=>{ tx = e.clientX; ty = e.clientY; });
+  function loop(){
+    mx += (tx - mx) * 0.08;
+    my += (ty - my) * 0.08;
+    spot.style.left = mx + 'px';
+    spot.style.top = my + 'px';
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // fade-in on scroll
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  },{threshold:0.12});
+  document.querySelectorAll('.fade').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

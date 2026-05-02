@@ -1,10 +1,10 @@
-import type { FastifyBaseLogger } from 'fastify'
+﻿import type { FastifyBaseLogger } from 'fastify'
 import { postMessage } from './slack-bot.client.js'
-import { askWhy } from '@/modules/why/why.service.js'
+import { recall } from '@/modules/why/why.service.js'
 import { CONFIDENCE_THRESHOLD } from '@/config/constants.js'
 import type { SlackBlock } from './slack-bot.client.js'
 
-// ─── Pattern detection ────────────────────────────────────────────────────
+// â”€â”€â”€ Pattern detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Fires when a message that @mentions the bot also looks like a WHY question.
 const WHY_PATTERNS = [
   /\bwhy\b/i,
@@ -28,8 +28,8 @@ export function stripBotMention(text: string, botUserId: string): string {
     .trim()
 }
 
-// ─── Block Kit formatter ──────────────────────────────────────────────────
-function buildReplyBlocks(result: Awaited<ReturnType<typeof askWhy>>): SlackBlock[] {
+// â”€â”€â”€ Block Kit formatter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function buildReplyBlocks(result: Awaited<ReturnType<typeof recall>>): SlackBlock[] {
   const blocks: SlackBlock[] = []
 
   if (result.cannotAnswer) {
@@ -42,16 +42,16 @@ function buildReplyBlocks(result: Awaited<ReturnType<typeof askWhy>>): SlackBloc
     })
 
     result.sourceNodes.slice(0, 4).forEach(n => {
-      const when = n.occurredAt ? `_${new Date(n.occurredAt).toLocaleDateString()}_ · ` : ''
+      const when = n.occurredAt ? `_${new Date(n.occurredAt).toLocaleDateString()}_ Â· ` : ''
       blocks.push({
         type: 'context',
-        elements: [{ type: 'mrkdwn', text: `${when}*${n.source}* — ${n.title}${n.sourceUrl ? ` <${n.sourceUrl}|↗>` : ''}` }],
+        elements: [{ type: 'mrkdwn', text: `${when}*${n.source}* â€” ${n.title}${n.sourceUrl ? ` <${n.sourceUrl}|â†—>` : ''}` }],
       })
     })
 
     blocks.push({
       type: 'context',
-      elements: [{ type: 'mrkdwn', text: `_Connect more sources to improve context coverage_ · <https://app.dyson.ai|dyson.ai>` }],
+      elements: [{ type: 'mrkdwn', text: `_Connect more sources to improve context coverage_ Â· <https://app.dyson.ai|dyson.ai>` }],
     })
     return blocks
   }
@@ -80,14 +80,14 @@ function buildReplyBlocks(result: Awaited<ReturnType<typeof askWhy>>): SlackBloc
     type: 'context',
     elements: [{
       type: 'mrkdwn',
-      text: `Confidence: *${(result.confidence * 100).toFixed(0)}%* · ${result.sourceNodes.length} events · <https://app.dyson.ai/app/why/${result.queryId}|View full timeline>`,
+      text: `Confidence: *${(result.confidence * 100).toFixed(0)}%* Â· ${result.sourceNodes.length} events Â· <https://app.dyson.ai/app/recall/${result.queryId}|View full timeline>`,
     }],
   })
 
   return blocks
 }
 
-// ─── Main handler ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function handleBotMention(opts: {
   tenantId:  string
@@ -101,7 +101,7 @@ export async function handleBotMention(opts: {
 
   logger.info({ tenantId, channel, questionLen: question.length }, 'Slack bot: handling @mention WHY question')
 
-  const result = await askWhy(question, tenantId, userId, logger)
+  const result = await recall(question, tenantId, userId, logger)
 
   const fallbackText = result.cannotAnswer
     ? `Dyson couldn't answer with confidence (${(result.confidence * 100).toFixed(0)}%). Here are the relevant events.`
@@ -117,7 +117,7 @@ export async function handleBotMention(opts: {
   logger.info({ tenantId, channel, confidence: result.confidence, cannotAnswer: result.cannotAnswer }, 'Slack bot: reply sent')
 }
 
-// ─── Incident post-mortem draft ───────────────────────────────────────────
+// â”€â”€â”€ Incident post-mortem draft â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Triggered when a channel matching #inc-* or #incident-* is created.
 
 const INCIDENT_PATTERN = /^#?(inc[-_]|incident[-_]|outage[-_]|postmortem[-_])/i
@@ -134,7 +134,7 @@ export async function handleIncidentChannelCreated(opts: {
 }) {
   const { tenantId, channelId, channelName, logger } = opts
 
-  logger.info({ tenantId, channelId, channelName }, 'Incident channel detected — starting post-mortem draft')
+  logger.info({ tenantId, channelId, channelName }, 'Incident channel detected â€” starting post-mortem draft')
 
   // Extract incident topic from channel name for the query
   const topic = channelName
@@ -149,17 +149,17 @@ export async function handleIncidentChannelCreated(opts: {
   ]
 
   const results = await Promise.allSettled(
-    questions.map(q => askWhy(q, tenantId, 'agent', logger))
+    questions.map(q => recall(q, tenantId, 'agent', logger))
   )
 
   const answered = results
     .filter(r => r.status === 'fulfilled' && !r.value.cannotAnswer && r.value.confidence >= CONFIDENCE_THRESHOLD)
-    .map(r => (r as PromiseFulfilledResult<Awaited<ReturnType<typeof askWhy>>>).value)
+    .map(r => (r as PromiseFulfilledResult<Awaited<ReturnType<typeof recall>>>).value)
 
   const blocks: SlackBlock[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '🔍 Dyson Post-Mortem Starter', emoji: true },
+      text: { type: 'plain_text', text: 'ðŸ” Dyson Post-Mortem Starter', emoji: true },
     },
     {
       type: 'section',
@@ -176,7 +176,7 @@ export async function handleIncidentChannelCreated(opts: {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `_Not enough context yet — the graph is still building. Try asking me directly once events are ingested:_ \`@Dyson what caused ${topic}?\``,
+        text: `_Not enough context yet â€” the graph is still building. Try asking me directly once events are ingested:_ \`@Dyson what caused ${topic}?\``,
       },
     })
   } else {
@@ -191,7 +191,7 @@ export async function handleIncidentChannelCreated(opts: {
       })
       if (result.citations.length > 0) {
         const cites = result.citations.slice(0, 3)
-          .map((c, j) => `[${j + 1}] ${c.claim}${c.sourceUrl ? ` <${c.sourceUrl}|↗>` : ''}`)
+          .map((c, j) => `[${j + 1}] ${c.claim}${c.sourceUrl ? ` <${c.sourceUrl}|â†—>` : ''}`)
           .join('\n')
         blocks.push({
           type: 'context',
@@ -204,13 +204,15 @@ export async function handleIncidentChannelCreated(opts: {
 
   blocks.push({
     type: 'context',
-    elements: [{ type: 'mrkdwn', text: `<https://app.dyson.ai/app/why|Ask more questions on Dyson> · Confidence: ${answered.map(r => `${(r.confidence * 100).toFixed(0)}%`).join(', ') || 'N/A'}` }],
+    elements: [{ type: 'mrkdwn', text: `<https://app.dyson.ai/app/why|Ask more questions on Dyson> Â· Confidence: ${answered.map(r => `${(r.confidence * 100).toFixed(0)}%`).join(', ') || 'N/A'}` }],
   })
 
-  // Top-level post to the incident channel — no threadTs
+  // Top-level post to the incident channel â€” no threadTs
   await postMessage({
     channel: channelId,
     text:    `Dyson post-mortem starter for ${topic}`,
     blocks,
   })
 }
+
+

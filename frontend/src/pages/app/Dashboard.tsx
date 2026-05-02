@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+﻿import { motion } from 'framer-motion'
 import { ArrowRight, Zap, List, TrendingUp, Clock, MessageSquare, GitPullRequest } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { SourcePill } from '@/components/shared/SourcePill'
@@ -7,7 +7,7 @@ import { authApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const stats = [
-  { label: 'WHY queries this week', value: '24', delta: '+12%', icon: Zap,         color: 'text-primary' },
+  { label: 'Memory recalls this week', value: '24', delta: '+12%', icon: Zap,         color: 'text-primary' },
   { label: 'Decisions detected',    value: '8',  delta: '+3',   icon: List,        color: 'text-citation' },
   { label: 'Events ingested',       value: '1.2k',delta: 'today',icon: TrendingUp, color: 'text-success' },
   { label: 'Avg response time',     value: '1.4s',delta: '-0.3s',icon: Clock,      color: 'text-violet-400' },
@@ -27,19 +27,19 @@ const recentDecisions = [
 ]
 
 const recentActivity = [
-  { type: 'slack'  as const, text: '#incidents — 3 messages linked to open decisions', time: '10m' },
-  { type: 'github' as const, text: 'PR #4721 — 2 related past decisions detected',     time: '42m' },
-  { type: 'slack'  as const, text: '#backend — WHY Engine answered @alex query',       time: '1h'  },
-  { type: 'notion' as const, text: 'RFC: payments-v2 — linked to 4 decisions',         time: '3h'  },
+  { type: 'slack'  as const, text: '#incidents â€” 3 messages linked to open decisions', time: '10m' },
+  { type: 'github' as const, text: 'PR #4721 â€” 2 related past decisions detected',     time: '42m' },
+  { type: 'slack'  as const, text: '#backend â€” WHY Engine answered @alex query',       time: '1h'  },
+  { type: 'notion' as const, text: 'RFC: payments-v2 â€” linked to 4 decisions',         time: '3h'  },
 ]
 
 const quickActions = [
-  { icon: Zap,           label: 'Ask a WHY question',  sub: 'Get a cited causal timeline',   to: '/app/why',             accent: 'border-primary/20 hover:border-primary/40 hover:bg-primary/5'  },
+  { icon: Zap,           label: 'Ask a WHY question',  sub: 'Get a cited causal timeline',   to: '/app/recall',             accent: 'border-primary/20 hover:border-primary/40 hover:bg-primary/5'  },
   { icon: MessageSquare, label: 'Connect Slack',        sub: 'Start ingesting messages',      to: '/app/settings/sources', accent: 'border-[#E01E5A]/20 hover:border-[#E01E5A]/40 hover:bg-[#E01E5A]/5' },
   { icon: GitPullRequest,label: 'Connect GitHub',       sub: 'Start ingesting PR context',   to: '/app/settings/sources', accent: 'border-white/10 hover:border-white/20 hover:bg-white/[0.03]' },
 ]
 
-// ─── Stat card ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Stat card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StatCard({ label, value, delta, icon: Icon, color }: typeof stats[number]) {
   return (
     <div className="rounded-lg border border-[#2E2E2E] bg-[#1C1C1C] p-5 hover:border-[#3D3D3D] hover:bg-[#212121] transition-all duration-150 cursor-default group">
@@ -92,9 +92,9 @@ export default function Dashboard() {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2E2E2E]">
             <div className="flex items-center gap-2">
               <Zap className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[13px] font-medium text-text-2">Recent WHY queries</span>
+              <span className="text-[13px] font-medium text-text-2">Recent recalls</span>
             </div>
-            <Link to="/app/why" className="text-[12px] text-text-3 hover:text-primary transition-colors flex items-center gap-1">
+            <Link to="/app/recall" className="text-[12px] text-text-3 hover:text-primary transition-colors flex items-center gap-1">
               Ask <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -110,7 +110,7 @@ export default function Dashboard() {
                   </p>
                   <div className="flex items-center gap-2 text-[11px] font-mono text-text-4">
                     <span>{q.sources} sources</span>
-                    <span>·</span>
+                    <span>Â·</span>
                     <span>{q.time}</span>
                   </div>
                 </div>
@@ -148,7 +148,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Recent decisions */}
+        {/* Key memories */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -158,7 +158,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2E2E2E]">
             <div className="flex items-center gap-2">
               <List className="w-3.5 h-3.5 text-citation" />
-              <span className="text-[13px] font-medium text-text-2">Recent decisions</span>
+              <span className="text-[13px] font-medium text-text-2">Key memories</span>
             </div>
             <Link to="/app/decisions" className="text-[12px] text-text-3 hover:text-primary transition-colors flex items-center gap-1">
               View all <ArrowRight className="w-3 h-3" />
@@ -210,3 +210,4 @@ export default function Dashboard() {
     </div>
   )
 }
+

@@ -1,16 +1,16 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, ThumbsUp, ThumbsDown, AlertCircle, Zap } from 'lucide-react'
 import { SourcePill } from '@/components/shared/SourcePill'
 import { ConfidenceBadge } from '@/components/shared/ConfidenceBadge'
-import { whyApi, type WhyResult, type Citation, ApiError } from '@/lib/api'
+import { recallApi, type RecallResult, type Citation, ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const suggestions = [
-  'Why did we move from session auth to JWT?',
-  'What caused the Q3 rate limit incident?',
-  'Why did we choose pgvector over Pinecone?',
-  'Why is payments still in the monolith?',
+  'What do we know about our auth system?',
+  'What happened during the Q3 incident?',
+  'Why did we choose pgvector?',
+  'What constraints exist on the payments service?',
 ]
 
 function sourceFromCitation(c: Citation): 'slack' | 'github' | 'notion' | 'meeting' | 'linear' {
@@ -24,7 +24,7 @@ function sourceFromCitation(c: Citation): 'slack' | 'github' | 'notion' | 'meeti
 
 export default function WhyEngine() {
   const [query,      setQuery]      = useState('')
-  const [result,     setResult]     = useState<WhyResult | null>(null)
+  const [result,     setResult]     = useState<RecallResult | null>(null)
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState<string | null>(null)
   const [feedbackGiven, setFeedbackGiven] = useState<'up' | 'down' | null>(null)
@@ -37,10 +37,10 @@ export default function WhyEngine() {
     setError(null)
     setFeedbackGiven(null)
     try {
-      const res = await whyApi.ask(q)
+      const res = await recallApi.ask(q)
       setResult(res)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong — please try again.')
+      setError(err instanceof ApiError ? err.message : 'Something went wrong â€” please try again.')
     } finally {
       setLoading(false)
     }
@@ -50,7 +50,7 @@ export default function WhyEngine() {
     if (!result || feedbackGiven) return
     setFeedbackGiven(helpful ? 'up' : 'down')
     try {
-      await whyApi.feedback(result.queryId, helpful)
+      await recallApi.feedback(result.queryId, helpful)
     } catch { /* non-critical */ }
   }
 
@@ -58,8 +58,8 @@ export default function WhyEngine() {
     <div className="max-w-[720px] mx-auto px-8 py-7">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-[22px] font-semibold text-text-1 mb-1">WHY Engine</h1>
-        <p className="text-[13px] text-text-3">Ask any question about why a decision was made.</p>
+        <h1 className="text-[22px] font-semibold text-text-1 mb-1">Recall</h1>
+        <p className="text-[13px] text-text-3">Ask anything your company has ever known. Get a cited, confident answer from real memory.</p>
       </div>
 
       {/* Query input */}
@@ -70,7 +70,7 @@ export default function WhyEngine() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleQuery(query)}
-            placeholder="Why did we…?   What caused…?   Who decided…?"
+            placeholder="Why did weâ€¦?   What causedâ€¦?   Who decidedâ€¦?"
             className="flex-1 bg-transparent text-[14px] text-text-1 placeholder:text-text-4 outline-none"
           />
           <button
@@ -144,7 +144,7 @@ export default function WhyEngine() {
               <>
                 {/* Timeline header */}
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-mono text-text-4 uppercase tracking-wider">Causal timeline</span>
+                  <span className="text-[11px] font-mono text-text-4 uppercase tracking-wider">Memory trail</span>
                   <ConfidenceBadge confidence={result.confidence} showBar />
                 </div>
 
@@ -191,7 +191,7 @@ export default function WhyEngine() {
                               rel="noreferrer"
                               className="text-[11px] text-primary/60 hover:text-primary mt-1 inline-flex items-center gap-1 transition-colors"
                             >
-                              view source →
+                              view source â†’
                             </a>
                           )}
                         </div>
@@ -271,3 +271,6 @@ export default function WhyEngine() {
     </div>
   )
 }
+
+
+

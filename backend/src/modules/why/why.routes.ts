@@ -4,18 +4,20 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
 import { writeAudit } from '@/modules/audit/audit.service.js'
 import {
-  AskWhySchema, HistoryQuerySchema, FeedbackSchema,
-  askWhy, getHistory, getQuery, submitFeedback,
+  RecallSchema, HistoryQuerySchema, FeedbackSchema,
+  recall, getHistory, getQuery, submitFeedback,
 } from './why.service.js'
 
-export default async function whyRoutes(app: FastifyInstance) {
+// Mounted at /api/v1/recall — the semantic memory retrieval layer.
+// Ingests a natural-language question, runs hybrid retrieval across the
+// full company memory graph, ranks with confidence scoring, composes a
+// cited answer via Gemini only when confidence ≥ threshold.
+export default async function recallRoutes(app: FastifyInstance) {
 
   app.addHook('preHandler', authMiddleware)
 
-  // ── POST /api/v1/why ─────────────────────────────────────────────────────
-  // CLAUDE.md §8: 10 req/min per USER on the WHY Engine (not just per tenant).
-  // keyGenerator scopes the limit to the authenticated user's JWT sub so
-  // one power-user cannot exhaust the tenant's shared bucket.
+  // ── POST /api/v1/recall ──────────────────────────────────────────────────
+  // 10 req/min per USER — scoped to JWT sub so one user can't exhaust the tenant bucket.
   app.post('/', {
     config: {
       rateLimit: {
@@ -23,29 +25,28 @@ export default async function whyRoutes(app: FastifyInstance) {
         timeWindow:   '1 minute',
         keyGenerator: (req) => {
           const payload = req.user as { sub?: string; tid?: string } | undefined
-          return `why:${payload?.tid ?? 'anon'}:${payload?.sub ?? req.ip}`
+          return `recall:${payload?.tid ?? 'anon'}:${payload?.sub ?? req.ip}`
         },
       },
     },
     schema: {
-      tags: ['WHY Engine'],
-      summary: 'Ask a WHY question — returns a cited causal timeline',
+      tags: ['Memory Recall'],
+      summary: 'Recall from company memory — returns a cited, confidence-scored answer',
       security: [{ bearerAuth: [] }],
-      body: zodToJsonSchema(AskWhySchema),
+      body: zodToJsonSchema(RecallSchema),
     },
   }, async (req, reply) => {
-    const { sub, tid }  = req.user as { sub: string; tid: string }
-    const { question }  = AskWhySchema.parse(req.body)
-    const result        = await askWhy(question, tid, sub, req.log)
+    const { sub, tid } = req.user as { sub: string; tid: string }
+    const { question } = RecallSchema.parse(req.body)
+    const result       = await recall(question, tid, sub, req.log)
 
-    // Audit only the query metadata — never the question text (PII per CLAUDE.md §15)
     void writeAudit({
-      tenantId:  tid,
-      actorId:   sub,
-      action:    'why.query',
-      resourceType: 'why_query',
-      resourceId: result.queryId,
-      metadata:  {
+      tenantId:    tid,
+      actorId:     sub,
+      action:      'memory.recall',
+      resourceType: 'recall',
+      resourceId:  result.queryId,
+      metadata: {
         questionHash: createHash('sha256').update(question).digest('hex').slice(0, 16),
         confidence:   result.confidence,
         cannotAnswer: result.cannotAnswer,
@@ -65,11 +66,11 @@ export default async function whyRoutes(app: FastifyInstance) {
     })
   })
 
-  // ── GET /api/v1/why/history ──────────────────────────────────────────────
+  // ── GET /api/v1/recall/history ───────────────────────────────────────────
   app.get('/history', {
     schema: {
-      tags: ['WHY Engine'],
-      summary: 'Get WHY query history for the current user',
+      tags: ['Memory Recall'],
+      summary: 'Recall history — past questions and answers for this user',
       security: [{ bearerAuth: [] }],
       querystring: zodToJsonSchema(HistoryQuerySchema),
     },
@@ -77,18 +78,17 @@ export default async function whyRoutes(app: FastifyInstance) {
     const { sub, tid } = req.user as { sub: string; tid: string }
     const query        = HistoryQuerySchema.parse(req.query)
     const result       = await getHistory(tid, sub, query)
-
     return reply.send({
       data: result.queries,
       meta: { cursor: result.nextCursor, hasMore: result.hasMore },
     })
   })
 
-  // ── GET /api/v1/why/:id ──────────────────────────────────────────────────
+  // ── GET /api/v1/recall/:id ───────────────────────────────────────────────
   app.get('/:id', {
     schema: {
-      tags: ['WHY Engine'],
-      summary: 'Get a specific WHY query result',
+      tags: ['Memory Recall'],
+      summary: 'Get a specific recall result by ID',
       security: [{ bearerAuth: [] }],
       params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } }, required: ['id'] },
     },
@@ -99,11 +99,11 @@ export default async function whyRoutes(app: FastifyInstance) {
     return reply.send({ data: result })
   })
 
-  // ── PATCH /api/v1/why/:id/feedback ──────────────────────────────────────
+  // ── PATCH /api/v1/recall/:id/feedback ───────────────────────────────────
   app.patch('/:id/feedback', {
     schema: {
-      tags: ['WHY Engine'],
-      summary: 'Submit feedback on a WHY query result',
+      tags: ['Memory Recall'],
+      summary: 'Submit feedback on a recall result',
       security: [{ bearerAuth: [] }],
       params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } }, required: ['id'] },
       body: zodToJsonSchema(FeedbackSchema),
@@ -115,13 +115,13 @@ export default async function whyRoutes(app: FastifyInstance) {
     const updated      = await submitFeedback(id, tid, score)
 
     void writeAudit({
-      tenantId:  tid,
-      actorId:   sub,
-      action:    'why.feedback',
-      resourceType: 'why_query',
-      resourceId: id,
-      metadata:  { score },
-      ipAddress: req.ip,
+      tenantId:    tid,
+      actorId:     sub,
+      action:      'memory.feedback',
+      resourceType: 'recall',
+      resourceId:  id,
+      metadata:    { score },
+      ipAddress:   req.ip,
     })
 
     return reply.send({ data: updated })

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -13,7 +13,7 @@ import { DysonMark } from '@/components/shared/DysonMark'
 import { NotificationPanel } from './NotificationPanel'
 import { CommandPalette } from './CommandPalette'
 
-// ─── Outside click ────────────────────────────────────────────────────────
+// â”€â”€â”€ Outside click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
   useEffect(() => {
     function h(e: MouseEvent) {
@@ -24,7 +24,7 @@ function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => voi
   }, [ref, cb])
 }
 
-// ─── Dropdown primitives ──────────────────────────────────────────────────
+// â”€â”€â”€ Dropdown primitives â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function FloatingMenu({ open, children, className = '' }: { open: boolean; children: React.ReactNode; className?: string }) {
   return (
     <AnimatePresence>
@@ -76,7 +76,7 @@ function MenuLabel({ children }: { children: string }) {
   return <p className="px-3 pt-1.5 pb-0.5 text-[10.5px] font-medium text-text-4 uppercase tracking-widest">{children}</p>
 }
 
-// ─── Workspace switcher ───────────────────────────────────────────────────
+// â”€â”€â”€ Workspace switcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const workspaces = [
   { id: '1', name: 'Acme Corp',    plan: 'Free',  initials: 'AC', color: 'bg-violet-500/25 text-violet-300' },
   { id: '2', name: 'Side Project', plan: 'Free',  initials: 'SP', color: 'bg-emerald-500/20 text-emerald-400' },
@@ -128,7 +128,7 @@ function WorkspaceSwitcher() {
   )
 }
 
-// ─── User menu ────────────────────────────────────────────────────────────
+// â”€â”€â”€ User menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function UserMenu() {
   const [open, setOpen] = useState(false)
   const ref             = useRef<HTMLDivElement>(null)
@@ -168,7 +168,7 @@ function UserMenu() {
           <p className="text-[13px] font-semibold text-text-1">{name}</p>
           {email && <p className="text-[11px] text-text-3 mt-0.5 truncate">{email}</p>}
         </div>
-        <MenuItem icon={User}         label="Profile"        shortcut="⌘P" onClick={() => { navigate('/app/settings/profile'); setOpen(false) }} />
+        <MenuItem icon={User}         label="Profile"        shortcut="âŒ˜P" onClick={() => { navigate('/app/settings/profile'); setOpen(false) }} />
         <MenuItem icon={CreditCard}   label="Billing"                      onClick={() => { navigate('/app/settings/billing'); setOpen(false) }} />
         <MenuItem icon={Settings}     label="Settings"                     onClick={() => { navigate('/app/settings'); setOpen(false) }} />
         <MenuSep />
@@ -182,7 +182,7 @@ function UserMenu() {
   )
 }
 
-// ─── Nav item ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Nav item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NavItem({
   to, icon: Icon, label, badge, exact = false,
 }: { to: string; icon: React.ElementType; label: string; badge?: number; exact?: boolean }) {
@@ -224,7 +224,7 @@ function NavItem({
   )
 }
 
-// ─── Section divider ──────────────────────────────────────────────────────
+// â”€â”€â”€ Section divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SidebarSection({ label, children }: { label?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -238,7 +238,7 @@ function SidebarSection({ label, children }: { label?: string; children: React.R
   )
 }
 
-// ─── Recent query item ─────────────────────────────────────────────────────
+// â”€â”€â”€ Recent query item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function RecentQueryItem({ query }: { query: string }) {
   return (
     <button className="w-full text-left flex items-center gap-2 px-3 py-[5px] mx-1 w-[calc(100%-8px)] rounded-lg text-[12.5px] text-text-4 hover:text-text-2 hover:bg-white/[0.04] transition-all duration-100 group">
@@ -248,7 +248,7 @@ function RecentQueryItem({ query }: { query: string }) {
   )
 }
 
-// ─── Source status ────────────────────────────────────────────────────────
+// â”€â”€â”€ Source status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const sourceConfig = {
   Slack:  { dot: 'bg-[#E01E5A]',  active: true  },
   GitHub: { dot: 'bg-[#8B949E]',  active: true  },
@@ -276,13 +276,13 @@ function SourceStatus({ name }: { name: keyof typeof sourceConfig }) {
   )
 }
 
-// ─── Topbar ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Topbar() {
   const location = useLocation()
   const crumbs: [string, string][] = [
-    ['/app/why',              'WHY Engine'],
-    ['/app/decisions',        'Decision Log'],
-    ['/app/onboarding-packs', 'Onboarding Packs'],
+    ['/app/why',              'Recall'],
+    ['/app/decisions',        'Memory Graph'],
+    ['/app/onboarding-packs', 'Team Briefings'],
     ['/app/search',           'Search'],
     ['/app/settings',         'Settings'],
   ]
@@ -300,10 +300,10 @@ function Topbar() {
       <div className="flex items-center gap-1.5">
         <NotificationPanel />
         <div className="w-px h-4 bg-[#282828] mx-1" />
-        <Link to="/app/why">
+        <Link to="/app/recall">
           <button className="h-7 px-3 flex items-center gap-1.5 rounded-lg border border-[#282828] bg-white/[0.03] text-[12px] font-medium text-text-2 hover:text-text-1 hover:bg-white/[0.06] hover:border-[#3D3D3D] transition-all duration-150 active:scale-[0.97]">
             <Zap className="w-3.5 h-3.5 text-primary" />
-            Ask WHY
+            Recall
           </button>
         </Link>
       </div>
@@ -311,7 +311,7 @@ function Topbar() {
   )
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const recentQueries = [
   'Why did we move to JWT?',
   'What caused the Q3 incident?',
@@ -325,10 +325,10 @@ export default function AppShell() {
 
       <div className="flex h-screen bg-[#141414] overflow-hidden">
 
-        {/* ── Sidebar ───────────────────────────────────────────────── */}
+        {/* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <aside className="w-[240px] flex-shrink-0 flex flex-col bg-[#181818] select-none overflow-hidden" style={{ borderRight: '1px solid #1E1E1E' }}>
 
-          {/* Brand + workspace — single unified header */}
+          {/* Brand + workspace â€” single unified header */}
           <div className="pt-3 pb-1">
             {/* Brand row */}
             <div className="flex items-center gap-2.5 px-4 py-1.5 mb-0.5">
@@ -339,7 +339,7 @@ export default function AppShell() {
               </span>
             </div>
 
-            {/* Workspace switcher — directly below brand */}
+            {/* Workspace switcher â€” directly below brand */}
             <WorkspaceSwitcher />
           </div>
 
@@ -352,9 +352,9 @@ export default function AppShell() {
             {/* Primary navigation */}
             <SidebarSection>
               <NavItem to="/app"              icon={LayoutDashboard} label="Dashboard"        exact />
-              <NavItem to="/app/why"          icon={Zap}             label="WHY Engine"       />
-              <NavItem to="/app/decisions"    icon={List}            label="Decision Log"     badge={8} />
-              <NavItem to="/app/onboarding-packs" icon={Users}      label="Onboarding Packs" />
+              <NavItem to="/app/recall"          icon={Zap}             label="Recall"       />
+              <NavItem to="/app/decisions"    icon={List}            label="Memory Graph"     badge={8} />
+              <NavItem to="/app/onboarding-packs" icon={Users}      label="Team Briefings" />
               <NavItem to="/app/search"       icon={Search}          label="Search"           />
             </SidebarSection>
 
@@ -373,13 +373,13 @@ export default function AppShell() {
               <Link to="/app/settings/sources">
                 <div className="flex items-center gap-2 px-3 py-[5px] mx-1 w-[calc(100%-8px)] rounded-lg hover:bg-white/[0.04] transition-colors group">
                   <Circle className="w-3 h-3 text-text-4/40 flex-shrink-0" />
-                  <span className="text-[12.5px] text-text-4/60 group-hover:text-text-3 transition-colors">Add source…</span>
+                  <span className="text-[12.5px] text-text-4/60 group-hover:text-text-3 transition-colors">Add sourceâ€¦</span>
                 </div>
               </Link>
             </SidebarSection>
           </nav>
 
-          {/* Bottom — settings + user */}
+          {/* Bottom â€” settings + user */}
           <div style={{ borderTop: '1px solid #1E1E1E' }}>
             {/* Settings nav item */}
             <div className="px-0 py-1.5">
@@ -394,7 +394,7 @@ export default function AppShell() {
           </div>
         </aside>
 
-        {/* ── Main content ──────────────────────────────────────────── */}
+        {/* â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <Topbar />
           <main className="flex-1 overflow-y-auto">
@@ -405,3 +405,4 @@ export default function AppShell() {
     </>
   )
 }
+

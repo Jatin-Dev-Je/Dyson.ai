@@ -6,7 +6,8 @@ export type AuditAction =
   | 'auth.signup' | 'auth.login' | 'auth.logout' | 'auth.refresh'
   | 'auth.accept_invite' | 'auth.change_password'
   | 'connector.connected' | 'connector.disconnected' | 'connector.synced'
-  | 'why.query' | 'why.feedback'
+  | 'memory.recall' | 'memory.feedback' | 'memory.created' | 'memory.linked'
+  | 'why.query' | 'why.feedback'  // legacy — kept for existing audit rows
   | 'decision.flagged'
   | 'pack.generated'
   | 'apikey.created' | 'apikey.revoked'

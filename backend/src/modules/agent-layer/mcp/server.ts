@@ -1,25 +1,29 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { EntityType } from '@/shared/types/entities.js'
 
 /**
- * MCP server for Dyson — exposes the WHY Engine, search, and decisions to any
- * MCP-compatible client (Claude Desktop, Cursor, Continue, custom agents, …).
+ * Dyson MCP Server — Company Memory for AI Agents
  *
- * The same server is mounted in two places:
- *   • In-process on Fastify at /mcp via Streamable HTTP transport — for hosted
- *     agents authenticating with a Dyson API key (Bearer dys_…).
- *   • Standalone via the bin/dyson-mcp stdio entry — for local installs in
- *     Cursor / Claude Desktop. That entry proxies tool calls back to a hosted
- *     Dyson over the same HTTP API key.
+ * Exposes the full company memory graph to any MCP-compatible client:
+ * Claude Desktop, Cursor, Continue, custom agents, CI pipelines.
  *
- * The handler interface lets us swap the implementation between "call services
- * directly" (hosted, in-process) and "proxy to remote Dyson over HTTP" (stdio).
+ * Core tools:
+ *   recall          — ask anything about what the company knows
+ *   remember        — write a memory back (agent actions, decisions, incidents)
+ *   search_memory   — full-text + semantic search across all company memory
+ *   recent_memories — what has the company been capturing lately
+ *   workspace_context — situational awareness snapshot
+ *
+ * Mounted in two places:
+ *   • /mcp (Streamable HTTP) — for hosted agents with a Dyson API key
+ *   • bin/dyson-mcp (stdio)  — for local Cursor / Claude Desktop installs
  */
 
-// ─── Handler interface — shared shape for direct and proxy backends ──────
+// ─── Handler interface ────────────────────────────────────────────────────
+// Shared shape for direct (in-process) and proxy (stdio→HTTP) backends.
+
 export interface DysonMcpHandlers {
-  askWhy(input: { question: string }): Promise<{
+  recall(input: { question: string }): Promise<{
     queryId:      string
     question:     string
     answer:       string | null
@@ -29,88 +33,111 @@ export interface DysonMcpHandlers {
     sourceNodes:  Array<{ id: string; title: string; source: string; sourceUrl: string | null; occurredAt?: string }>
   }>
 
-  searchContext(input: { query: string; type?: 'all' | 'decision' | 'event' | 'query'; limit?: number }): Promise<{
+  remember(input: {
+    title:    string
+    content:  string
+    type?:    string
+    url?:     string
+    metadata?: Record<string, unknown>
+  }): Promise<{ id: string | null; saved: boolean }>
+
+  searchMemory(input: {
+    query: string
+    type?:  string
+    limit?: number
+  }): Promise<{
     results: Array<{ id: string; type: string; title: string; summary: string; source?: string; sourceUrl?: string | null; confidence?: number }>
   }>
 
-  recentDecisions(input: { limit?: number; minConfidence?: number }): Promise<{
-    decisions: Array<{ id: string; title: string; summary: string; source: string; sourceUrl: string | null; occurredAt?: string; decisionConfidence?: number | null }>
+  recentMemories(input: {
+    limit?:         number
+    type?:          string
+    minConfidence?: number
+  }): Promise<{
+    memories: Array<{ id: string; title: string; type: string; source: string; sourceUrl: string | null; occurredAt?: string; confidence?: number | null }>
   }>
 
-  getDecision(input: { id: string }): Promise<{
-    id:       string
-    title:    string
-    summary:  string
-    timeline: Array<{ id: string; title: string; source: string; occurredAt?: string }>
-    sourceUrl?: string | null
+  getMemory(input: { id: string }): Promise<{
+    id: string; title: string; content: string; type: string; source: string; sourceUrl: string | null
+    occurredAt?: string; links?: Array<{ targetId: string; relationship: string }>
   }>
 
-  getNode(input: { id: string }): Promise<{
-    id: string; title: string; summary: string; source: string; sourceUrl: string | null
-    occurredAt?: string; isDecision?: boolean
-  }>
-
-  writeEvent(input: { type?: string; title: string; content: string; url?: string; metadata?: Record<string, unknown> }): Promise<{
-    id: string | null; queued: boolean
-  }>
-
-  workspaceOverview(): Promise<{
-    recentDecisions: Array<{ id: string; title: string; source: string; confidence?: number | null; occurredAt?: string }>
-    recentQueries:   Array<{ id: string; title: string }>
+  workspaceContext(): Promise<{
+    recentMemories: Array<{ id: string; title: string; type: string; source: string; confidence?: number | null; occurredAt?: string }>
+    recentRecalls:  Array<{ id: string; question: string }>
+    stats:          { totalMemories: number; decisionsCount: number; incidentsCount: number }
     note: string
   }>
 }
 
-// ─── Build & register a fresh McpServer ──────────────────────────────────
+// ─── Server factory ───────────────────────────────────────────────────────
+
 export function createDysonMcpServer(handlers: DysonMcpHandlers): McpServer {
   const server = new McpServer(
     {
       name:    'dyson',
-      title:   'Dyson — context infrastructure',
-      version: '1.0.0',
+      title:   'Dyson — Company Memory',
+      version: '2.0.0',
     },
     {
-      // Long-form description so picker UIs in Claude Desktop / Cursor have something useful
       instructions:
-        'Dyson is the system of record for "why". It connects Slack, GitHub, Notion and meetings into one ' +
-        'queryable context graph. Use ask_why to get a cited causal timeline for any decision question. ' +
-        'Use search_context to find specific events or decisions. Use recent_decisions to get a list of ' +
-        'detected decisions for situational awareness. All answers carry citations and a confidence score; ' +
-        'below 0.72 confidence Dyson refuses to compose an interpretation and returns the raw events instead.',
+        'Dyson is the persistent memory system for your company. It captures every decision, incident, ' +
+        'standard, and context across Slack, GitHub, docs, and direct writes — connecting them into a ' +
+        'searchable, queryable knowledge graph that compounds in value over time.\n\n' +
+        'Use recall() to ask anything the company has ever known. ' +
+        'Use remember() to write new memories after you act. ' +
+        'Use search_memory() to find specific context. ' +
+        'All answers carry citations and confidence scores. ' +
+        'Below 0.72 confidence, Dyson returns raw source memories instead of composing an answer.',
     }
   )
 
-  // ── Tool: ask_why ───────────────────────────────────────────────────────
+  // ── Tool: recall ─────────────────────────────────────────────────────────
   server.registerTool(
-    'ask_why',
+    'recall',
     {
-      title:       'Ask WHY',
+      title:       'Recall from company memory',
       description:
-        'Ask a "why did we…?" question against the workspace context graph. Returns a reconstructed ' +
-        'causal timeline with citations on every claim and a calibrated confidence score. If confidence ' +
-        'is below the threshold, returns the source events without interpretation rather than guessing.',
+        'Ask any question against the full company memory graph. Returns a cited, confidence-scored answer ' +
+        'reconstructed from real company events, decisions, and context. Use for: "Why did we X?", ' +
+        '"What do we know about Y?", "Who decided Z and when?", "What caused this incident?". ' +
+        'If confidence is below threshold, returns raw memories instead of interpreting them.',
       inputSchema: {
-        question: z.string().min(3).max(1000).describe('The natural-language WHY question to answer.'),
+        question: z.string().min(3).max(1000).describe(
+          'Any question about what the company knows. Natural language. Examples: ' +
+          '"Why did we move to JWT auth?", "What do we know about our payments system?", ' +
+          '"Who has context on the rate limiter?"'
+        ),
       },
     },
     async ({ question }) => {
-      const r = await handlers.askWhy({ question })
+      const r = await handlers.recall({ question })
 
-      const lines = [
-        r.cannotAnswer
-          ? `**Cannot answer with confidence** (${(r.confidence * 100).toFixed(0)}%). Returning ${r.sourceNodes.length} source events for you to interpret.`
-          : `**Answer** (confidence ${(r.confidence * 100).toFixed(0)}%):\n\n${r.answer ?? '(no answer)'}`,
-      ]
+      const lines: string[] = []
+
+      if (r.cannotAnswer) {
+        lines.push(
+          `**Not enough memory** (confidence ${(r.confidence * 100).toFixed(0)}%)`,
+          '',
+          `Dyson found ${r.sourceNodes.length} related memories but confidence is too low to compose a reliable answer. Raw memories below.`,
+        )
+      } else {
+        lines.push(
+          `**${r.answer}**`,
+          '',
+          `Confidence: ${(r.confidence * 100).toFixed(0)}%`,
+        )
+      }
 
       if (r.citations.length > 0) {
-        lines.push('\n**Citations**')
+        lines.push('', '**Citations**')
         r.citations.forEach((c, i) => {
           lines.push(`[${i + 1}] ${c.claim}${c.sourceUrl ? ` — ${c.sourceUrl}` : ''} (${(c.confidence * 100).toFixed(0)}%)`)
         })
       }
 
       if (r.sourceNodes.length > 0) {
-        lines.push('\n**Source events**')
+        lines.push('', '**Source memories**')
         r.sourceNodes.forEach((n, i) => {
           const when = n.occurredAt ? ` · ${n.occurredAt}` : ''
           lines.push(`${i + 1}. [${n.source}] ${n.title}${when}${n.sourceUrl ? ` — ${n.sourceUrl}` : ''}`)
@@ -118,271 +145,255 @@ export function createDysonMcpServer(handlers: DysonMcpHandlers): McpServer {
       }
 
       return {
-        content:           [{ type: 'text', text: lines.join('\n') }],
+        content:           [{ type: 'text' as const, text: lines.join('\n') }],
         structuredContent: r as unknown as Record<string, unknown>,
       }
     }
   )
 
-  // ── Tool: search_context ───────────────────────────────────────────────
+  // ── Tool: remember ────────────────────────────────────────────────────────
   server.registerTool(
-    'search_context',
+    'remember',
     {
-      title:       'Search context',
+      title:       'Write to company memory',
       description:
-        'Full-text + semantic search across the workspace graph. Use to find specific events, decisions, ' +
-        'or past WHY queries. Always tenant-scoped.',
+        'Write a memory into the company knowledge graph. Use this when you (as an AI agent) take an ' +
+        'action, observe something important, or encounter a decision — so it becomes permanent ' +
+        'institutional memory, searchable by every future agent and team member.\n\n' +
+        'Memory types:\n' +
+        '  decision   — a choice was made ("we chose X over Y because Z")\n' +
+        '  incident   — something broke, here\'s what happened\n' +
+        '  standard   — how we do things here ("always do X")\n' +
+        '  context    — general knowledge about a system or team\n' +
+        '  constraint — we can\'t do X because Y\n' +
+        '  outcome    — we tried X, result was Y\n\n' +
+        'The richer the content, the better causal connections the memory graph can draw.',
       inputSchema: {
-        query: z.string().min(1).max(500).describe('Search query.'),
-        type:  z.enum(['all', 'decision', 'event', 'query']).optional().describe('Filter by entity type.'),
-        limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20).'),
+        title:   z.string().min(3).max(300).describe('One-line title for this memory.'),
+        content: z.string().min(10).max(8000).describe(
+          'Full content — what happened, why it matters, what was decided. The more context, the better.'
+        ),
+        type: z.enum(['decision', 'incident', 'standard', 'context', 'constraint', 'outcome'])
+          .optional()
+          .describe('Memory type (default: context).'),
+        url: z.string().url().optional().describe('Source URL — PR, issue, doc, Slack thread.'),
       },
     },
     async (input) => {
-      // exactOptionalPropertyTypes: only forward keys that are actually set
-      const args: Parameters<typeof handlers.searchContext>[0] = { query: input.query }
-      if (input.type  !== undefined) args.type  = input.type
-      if (input.limit !== undefined) args.limit = input.limit
-      const r = await handlers.searchContext(args)
-      const text = r.results.length === 0
-        ? '_No results._'
-        : r.results.map((res, i) =>
-            `${i + 1}. [${res.type}${res.source ? `/${res.source}` : ''}] ${res.title}\n   ${res.summary}${res.sourceUrl ? `\n   ${res.sourceUrl}` : ''}`
-          ).join('\n\n')
-      return {
-        content:           [{ type: 'text', text }],
-        structuredContent: r as unknown as Record<string, unknown>,
-      }
-    }
-  )
-
-  // ── Tool: recent_decisions ─────────────────────────────────────────────
-  server.registerTool(
-    'recent_decisions',
-    {
-      title:       'Recent decisions',
-      description:
-        'List recent detected decisions across the workspace. Useful for situational awareness — what ' +
-        'has the team been deciding lately? Decisions are detected automatically from message + PR + ' +
-        'meeting signals.',
-      inputSchema: {
-        limit:         z.number().int().min(1).max(50).optional().describe('Max decisions (default 10).'),
-        minConfidence: z.number().min(0).max(1).optional().describe('Only return decisions ≥ this confidence (default 0.60).'),
-      },
-    },
-    async (input) => {
-      const args: Parameters<typeof handlers.recentDecisions>[0] = {}
-      if (input.limit         !== undefined) args.limit         = input.limit
-      if (input.minConfidence !== undefined) args.minConfidence = input.minConfidence
-      const r = await handlers.recentDecisions(args)
-      const text = r.decisions.length === 0
-        ? '_No decisions detected yet._'
-        : r.decisions.map((d, i) => {
-            const when = d.occurredAt ? ` · ${d.occurredAt}` : ''
-            const conf = d.decisionConfidence !== null && d.decisionConfidence !== undefined ? ` · conf ${(d.decisionConfidence * 100).toFixed(0)}%` : ''
-            return `${i + 1}. [${d.source}] ${d.title}${when}${conf}\n   ${d.summary}${d.sourceUrl ? `\n   ${d.sourceUrl}` : ''}`
-          }).join('\n\n')
-      return {
-        content:           [{ type: 'text', text }],
-        structuredContent: r as unknown as Record<string, unknown>,
-      }
-    }
-  )
-
-  // ── Resource: dyson://decision/{id} ────────────────────────────────────
-  server.registerResource(
-    'decision',
-    new ResourceTemplate('dyson://decision/{id}', { list: undefined }),
-    {
-      title:       'Dyson decision',
-      description: 'Read a specific detected decision with its full causal timeline.',
-      mimeType:    'text/markdown',
-    },
-    async (uri, vars) => {
-      const id = String(vars.id)
-      const d  = await handlers.getDecision({ id })
-      const lines = [
-        `# ${d.title}`,
-        '',
-        d.summary,
-        '',
-        '## Causal timeline',
-        ...d.timeline.map((t, i) => {
-          const when = t.occurredAt ? ` · ${t.occurredAt}` : ''
-          return `${i + 1}. **${t.title}** _(${t.source}${when})_`
-        }),
-        '',
-        d.sourceUrl ? `Source: ${d.sourceUrl}` : '',
-      ].filter(Boolean).join('\n')
-
-      return {
-        contents: [{ uri: uri.href, mimeType: 'text/markdown', text: lines }],
-      }
-    }
-  )
-
-  // ── Resource: dyson://node/{id} ────────────────────────────────────────
-  server.registerResource(
-    'node',
-    new ResourceTemplate('dyson://node/{id}', { list: undefined }),
-    {
-      title:       'Dyson context node',
-      description: 'Read a single context-graph node (event, decision, message, code change, …).',
-      mimeType:    'text/markdown',
-    },
-    async (uri, vars) => {
-      const id = String(vars.id)
-      const n  = await handlers.getNode({ id })
-      const meta = [
-        `Source: ${n.source}`,
-        n.occurredAt ? `Occurred: ${n.occurredAt}` : '',
-        n.isDecision ? 'Type: decision' : '',
-      ].filter(Boolean).join(' · ')
-      const text = `# ${n.title}\n\n${meta}\n\n${n.summary}${n.sourceUrl ? `\n\n${n.sourceUrl}` : ''}`
-      return {
-        contents: [{ uri: uri.href, mimeType: 'text/markdown', text }],
-      }
-    }
-  )
-
-  // ── Tool: write_event — agents contribute to institutional memory ────────
-  server.registerTool(
-    'write_event',
-    {
-      title:       'Write event',
-      description:
-        'Write a context event back to the Dyson graph. Use this when you (as an AI agent) take an ' +
-        'action or make a decision so that it becomes part of the team\'s institutional memory. ' +
-        'Requires a write-scoped API key. Examples: "I refactored auth.ts because we deprecated ' +
-        'sessions" or "I added retry logic after observing timeout errors in the logs."',
-      inputSchema: {
-        title:   z.string().min(1).max(300).describe('One-line title for this event.'),
-        content: z.string().min(1).max(8000).describe('Full explanation — what happened and why. The more context, the better causal links the graph can draw.'),
-        type:    z.nativeEnum(EntityType).optional().describe('Entity type (default: message).'),
-        url:     z.string().url().optional().describe('Source URL (PR, issue, file) if applicable.'),
-      },
-    },
-    async (input) => {
-      const args: Parameters<typeof handlers.writeEvent>[0] = {
+      const args: Parameters<typeof handlers.remember>[0] = {
         title:   input.title,
         content: input.content,
       }
       if (input.type !== undefined) args.type = input.type
       if (input.url  !== undefined) args.url  = input.url
 
-      const r = await handlers.writeEvent(args)
-      const text = r.queued
-        ? `✓ Event written to context graph (id: ${r.id ?? 'pending'}). It will be processed and linked to related events within seconds.`
-        : `Event was a duplicate — already in the graph.`
-      return { content: [{ type: 'text', text }], structuredContent: r as unknown as Record<string, unknown> }
+      const r = await handlers.remember(args)
+      const text = r.saved
+        ? `✓ Memory saved (id: ${r.id ?? 'pending'}). It is now part of the company knowledge graph and immediately searchable.`
+        : `Memory was a duplicate — already exists in the graph.`
+
+      return {
+        content:           [{ type: 'text' as const, text }],
+        structuredContent: r as unknown as Record<string, unknown>,
+      }
     }
   )
 
-  // ── Tool: workspace_overview ─────────────────────────────────────────────
+  // ── Tool: search_memory ───────────────────────────────────────────────────
   server.registerTool(
-    'workspace_overview',
+    'search_memory',
     {
-      title:       'Workspace overview',
+      title:       'Search company memory',
       description:
-        'Get a digest of recent workspace activity — latest decisions and recent WHY queries. ' +
-        'Use at the start of an agentic session to understand current context before taking actions.',
+        'Full-text + semantic search across the entire company memory graph. Use to find specific events, ' +
+        'decisions, incidents, standards, or context. More targeted than recall — use when you know ' +
+        'what you\'re looking for rather than asking an open question.',
+      inputSchema: {
+        query: z.string().min(1).max(500).describe('What to search for.'),
+        type:  z.enum(['decision', 'incident', 'standard', 'context', 'constraint', 'outcome', 'event'])
+          .optional()
+          .describe('Filter by memory type.'),
+        limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20).'),
+      },
+    },
+    async (input) => {
+      const args: Parameters<typeof handlers.searchMemory>[0] = { query: input.query }
+      if (input.type  !== undefined) args.type  = input.type
+      if (input.limit !== undefined) args.limit = input.limit
+
+      const r = await handlers.searchMemory(args)
+      const text = r.results.length === 0
+        ? '_No memories found._'
+        : r.results.map((res, i) =>
+            `${i + 1}. [${res.type}${res.source ? `/${res.source}` : ''}] **${res.title}**\n   ${res.summary}${res.sourceUrl ? `\n   ${res.sourceUrl}` : ''}`
+          ).join('\n\n')
+
+      return {
+        content:           [{ type: 'text' as const, text }],
+        structuredContent: r as unknown as Record<string, unknown>,
+      }
+    }
+  )
+
+  // ── Tool: recent_memories ─────────────────────────────────────────────────
+  server.registerTool(
+    'recent_memories',
+    {
+      title:       'Recent company memories',
+      description:
+        'List what the company has been capturing recently — decisions made, incidents logged, ' +
+        'context written. Use at the start of an agentic session for situational awareness.',
+      inputSchema: {
+        limit:         z.number().int().min(1).max(50).optional().describe('Max results (default 10).'),
+        type:          z.enum(['decision', 'incident', 'standard', 'context', 'constraint', 'outcome'])
+          .optional().describe('Filter by memory type.'),
+        minConfidence: z.number().min(0).max(1).optional().describe('Min confidence score.'),
+      },
+    },
+    async (input) => {
+      const args: Parameters<typeof handlers.recentMemories>[0] = {}
+      if (input.limit         !== undefined) args.limit         = input.limit
+      if (input.type          !== undefined) args.type          = input.type
+      if (input.minConfidence !== undefined) args.minConfidence = input.minConfidence
+
+      const r = await handlers.recentMemories(args)
+      const text = r.memories.length === 0
+        ? '_No memories yet — connect Slack and GitHub to start ingesting company context._'
+        : r.memories.map((m, i) => {
+            const when = m.occurredAt ? ` · ${m.occurredAt}` : ''
+            const conf = m.confidence != null ? ` · ${(m.confidence * 100).toFixed(0)}%` : ''
+            return `${i + 1}. [${m.type}/${m.source}] **${m.title}**${when}${conf}${m.sourceUrl ? `\n   ${m.sourceUrl}` : ''}`
+          }).join('\n\n')
+
+      return {
+        content:           [{ type: 'text' as const, text }],
+        structuredContent: r as unknown as Record<string, unknown>,
+      }
+    }
+  )
+
+  // ── Tool: workspace_context ───────────────────────────────────────────────
+  server.registerTool(
+    'workspace_context',
+    {
+      title:       'Workspace memory snapshot',
+      description:
+        'Get a full situational awareness snapshot of the workspace — recent memories, past recalls, ' +
+        'and memory graph stats. Use at the start of a session or when you need to orient yourself.',
       inputSchema: {},
     },
     async () => {
-      const r    = await handlers.workspaceOverview()
-      const dec  = r.recentDecisions.map((d, i) =>
-        `${i + 1}. ${d.title} (${d.source}${d.confidence !== null && d.confidence !== undefined ? `, conf ${(d.confidence * 100).toFixed(0)}%` : ''})`
+      const r   = await handlers.workspaceContext()
+      const mem = r.recentMemories.map((m, i) =>
+        `${i + 1}. [${m.type}/${m.source}] ${m.title}${m.confidence != null ? ` · ${(m.confidence * 100).toFixed(0)}%` : ''}`
       ).join('\n')
-      const qry  = r.recentQueries.map((q, i) => `${i + 1}. ${q.title}`).join('\n')
+      const rec = r.recentRecalls.map((q, i) => `${i + 1}. ${q.question}`).join('\n')
+
       const text = [
-        '**Recent decisions:**',
-        dec || '_None yet_',
+        `**Memory graph stats:** ${r.stats.totalMemories} total · ${r.stats.decisionsCount} decisions · ${r.stats.incidentsCount} incidents`,
         '',
-        '**Recent WHY queries:**',
-        qry || '_None yet_',
+        '**Recent memories:**',
+        mem || '_None yet_',
+        '',
+        '**Recent recalls:**',
+        rec || '_None yet_',
         '',
         `_${r.note}_`,
       ].join('\n')
-      return { content: [{ type: 'text', text }], structuredContent: r as unknown as Record<string, unknown> }
+
+      return {
+        content:           [{ type: 'text' as const, text }],
+        structuredContent: r as unknown as Record<string, unknown>,
+      }
     }
   )
 
-  // ── Prompts — role-specific system context for different agent types ─────
-  server.prompt(
-    'coding-agent',
-    'System context for a coding AI agent operating inside this workspace',
-    {},
-    () => ({
-      messages: [{
-        role: 'user',
-        content: {
-          type: 'text',
-          text: [
-            'You are a coding assistant with access to the Dyson context graph for this engineering workspace.',
-            '',
-            'Before suggesting any architectural change, refactor, or code removal:',
-            '1. Call workspace_overview to understand recent decisions',
-            '2. Call ask_why with context about the area you\'re changing',
-            '3. If Dyson returns a relevant past decision, surface it to the user before proceeding',
-            '4. After making a change, call write_event to record what you did and why',
-            '',
-            'You should NEVER re-introduce patterns that Dyson indicates were explicitly deprecated.',
-            'When in doubt, ask_why first.',
-          ].join('\n'),
-        },
-      }],
-    })
+  // ── Resource: dyson://memory/{id} ─────────────────────────────────────────
+  server.registerResource(
+    'memory',
+    new ResourceTemplate('dyson://memory/{id}', { list: undefined }),
+    {
+      title:       'Dyson memory node',
+      description: 'Read a specific company memory with its linked context.',
+      mimeType:    'text/markdown',
+    },
+    async (uri, vars) => {
+      const id = String(vars.id)
+      const m  = await handlers.getMemory({ id })
+      const meta = [`Type: ${m.type}`, `Source: ${m.source}`, m.occurredAt ? `Occurred: ${m.occurredAt}` : '']
+        .filter(Boolean).join(' · ')
+      const links = m.links?.length
+        ? `\n\n## Linked memories\n${m.links.map(l => `- [${l.relationship}] ${l.targetId}`).join('\n')}`
+        : ''
+      const text = `# ${m.title}\n\n${meta}\n\n${m.content}${m.sourceUrl ? `\n\n${m.sourceUrl}` : ''}${links}`
+      return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text }] }
+    }
   )
 
-  server.prompt(
-    'sre-agent',
-    'System context for an SRE or on-call AI agent',
-    {},
-    () => ({
-      messages: [{
-        role: 'user',
-        content: {
-          type: 'text',
-          text: [
-            'You are an SRE assistant with access to the Dyson context graph.',
-            '',
-            'During an incident:',
-            '1. Call ask_why with "What caused [symptom]?" to find causal history',
-            '2. Call ask_why with "Were there similar past incidents?" for patterns',
-            '3. Call search_context to find relevant decisions about the affected service',
-            '4. After resolving, call write_event to record the resolution and root cause',
-            '',
-            'Always cite your sources. Confidence below 72% means Dyson doesn\'t have enough context — say so explicitly.',
-          ].join('\n'),
-        },
-      }],
-    })
-  )
+  // ── Prompts — role-specific agent system context ──────────────────────────
 
-  server.prompt(
-    'onboarding-agent',
-    'System context for an onboarding or new team member AI assistant',
-    {},
-    () => ({
-      messages: [{
-        role: 'user',
-        content: {
-          type: 'text',
-          text: [
-            'You are helping a new team member understand their codebase and team decisions.',
-            '',
-            'Helpful patterns:',
-            '1. workspace_overview — start with what has been decided recently',
-            '2. ask_why about the services or modules the new member is working on',
-            '3. recent_decisions — what are the active architectural constraints?',
-            '',
-            'Be honest about confidence. If Dyson returns cannotAnswer: true, say "I don\'t have enough context yet — try asking your team lead."',
-            'Never invent history that isn\'t in the context graph.',
-          ].join('\n'),
-        },
-      }],
-    })
-  )
+  server.prompt('coding-agent', 'Company memory context for a coding AI agent', {}, () => ({
+    messages: [{
+      role: 'user',
+      content: {
+        type: 'text',
+        text: [
+          'You have access to your company\'s full institutional memory through Dyson.',
+          '',
+          'Before suggesting any change, refactor, or deletion:',
+          '1. Call workspace_context — know what\'s been decided recently',
+          '2. Call recall with a question about the area you\'re changing',
+          '3. Call search_memory for specific standards or constraints that apply',
+          '4. Surface any relevant past decisions to the user before proceeding',
+          '',
+          'After making a change:',
+          '5. Call remember with type="decision" or type="context" to record what you did and why',
+          '',
+          'Never re-introduce patterns that company memory shows were deprecated.',
+          'When in doubt, recall first.',
+        ].join('\n'),
+      },
+    }],
+  }))
+
+  server.prompt('sre-agent', 'Company memory context for an SRE or on-call agent', {}, () => ({
+    messages: [{
+      role: 'user',
+      content: {
+        type: 'text',
+        text: [
+          'You have access to your company\'s full incident and operational memory through Dyson.',
+          '',
+          'During an incident:',
+          '1. recall("What caused [symptom]?") — find causal history',
+          '2. recall("Were there similar past incidents?") — find patterns',
+          '3. search_memory([service name]) — find all context about the affected system',
+          '4. After resolving: remember(type="incident") — record root cause and resolution',
+          '',
+          'Below 72% confidence, say "company memory doesn\'t have enough context" — don\'t guess.',
+        ].join('\n'),
+      },
+    }],
+  }))
+
+  server.prompt('onboarding-agent', 'Company memory context for an onboarding assistant', {}, () => ({
+    messages: [{
+      role: 'user',
+      content: {
+        type: 'text',
+        text: [
+          'You help new team members access company memory and get up to speed fast.',
+          '',
+          '1. workspace_context — show what the company has been working on',
+          '2. recall about the systems and teams the new member will work with',
+          '3. recent_memories(type="standard") — what are the active conventions?',
+          '4. recent_memories(type="decision") — what architectural choices should they know?',
+          '',
+          'Be honest about gaps. If recall returns cannotAnswer, say so and point to a team member.',
+        ].join('\n'),
+      },
+    }],
+  }))
 
   return server
 }

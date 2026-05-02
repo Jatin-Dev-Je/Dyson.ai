@@ -9,7 +9,7 @@ import Signup         from '@/pages/auth/Signup'
 import Onboarding     from '@/pages/onboarding/Onboarding'
 import AppShell       from '@/components/layout/AppShell'
 import Dashboard      from '@/pages/app/Dashboard'
-import WhyEngine      from '@/pages/app/WhyEngine'
+import Recall         from '@/pages/app/WhyEngine'
 import DecisionLog    from '@/pages/app/DecisionLog'
 import OnboardingPacks from '@/pages/app/onboarding-packs/OnboardingPacks'
 import PackDetail     from '@/pages/app/onboarding-packs/PackDetail'
@@ -51,7 +51,7 @@ export default function App() {
           }>
             <Route index                   element={<Dashboard />} />
             <Route path="dashboard"        element={<Dashboard />} />
-            <Route path="why"              element={<WhyEngine />} />
+            <Route path="recall"           element={<Recall />} />
             <Route path="decisions"        element={<DecisionLog />} />
             <Route path="onboarding-packs" element={<OnboardingPacks />} />
             <Route path="onboarding-packs/:id" element={<PackDetail />} />
