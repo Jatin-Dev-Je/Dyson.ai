@@ -135,23 +135,23 @@ export default function Signup() {
   }
 
   return (
-    <AuthLayout>
-      <div className="px-8 pt-8 pb-7">
+    <AuthLayout wide>
+      <div className="px-8 pt-7 pb-6">
 
         {/* Header */}
-        <div className="mb-7">
+        <div className="mb-6">
           <h1 className="text-[22px] font-semibold text-ink-1 tracking-tight mb-1">Create your account</h1>
           <p className="text-[13.5px] text-ink-3">Set up Dyson for your engineering team</p>
         </div>
 
-        {/* OAuth */}
-        <div className="space-y-2.5 mb-6">
+        {/* OAuth — side by side on wide card */}
+        <div className="grid grid-cols-2 gap-2.5 mb-5">
           <OAuthButton provider="google" />
           <OAuthButton provider="github" />
         </div>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-line" />
           <span className="text-[12px] text-ink-4 font-medium">or continue with email</span>
           <div className="flex-1 h-px bg-line" />
@@ -167,38 +167,37 @@ export default function Signup() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} noValidate>
-          <div className="space-y-4">
+          <div className="space-y-3.5">
 
-            {/* Name + Email row */}
+            {/* Name + Email side by side */}
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Full name" placeholder="Alex Kumar" autoFocus
                 value={name} error={errors.name}
                 onChange={v => { setName(v); setErrors(e => ({ ...e, name: undefined })) }} />
-              <InputField label="Work email" type="email" placeholder="alex@co.com"
+              <InputField label="Work email" type="email" placeholder="alex@company.com"
                 autoComplete="email" value={email} error={errors.email}
                 onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: undefined })) }} />
             </div>
 
             {/* Password */}
-            <div className="relative">
+            <div>
               <InputField label="Password" type="password" placeholder="Minimum 8 characters"
                 autoComplete="new-password" value={password} error={errors.password}
                 onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: undefined })) }} />
-              <div className="mt-1"><PasswordStrength password={password} /></div>
+              <PasswordStrength password={password} />
             </div>
 
-            {/* Workspace section */}
-            <div className="pt-1 border-t border-line">
-              <p className="text-[11px] font-semibold text-ink-4 uppercase tracking-[0.06em] mb-3 mt-3">
+            {/* Workspace — side by side on wide card */}
+            <div className="border-t border-line pt-3.5">
+              <p className="text-[10.5px] font-semibold text-ink-4 uppercase tracking-[0.07em] mb-3">
                 Workspace
               </p>
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <InputField label="Workspace name" placeholder="Acme Engineering"
                   value={workspaceName} error={errors.workspaceName}
                   onChange={handleWorkspaceName} />
-                <InputField label="Workspace URL" prefix="dyson.ai/"
+                <InputField label="URL" prefix="dyson.ai/"
                   placeholder="acme-eng" value={workspaceSlug} error={errors.workspaceSlug}
-                  hint={workspaceSlug ? `/${workspaceSlug}` : undefined}
                   onChange={v => {
                     setSlugTouched(true)
                     setWorkspaceSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, ''))
@@ -209,7 +208,7 @@ export default function Signup() {
 
             {/* Submit */}
             <button type="submit" disabled={loading}
-              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg bg-primary text-[13.5px] font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm mt-2">
+              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg bg-primary text-[13.5px] font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
               {loading
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account…</>
                 : 'Create account'}
@@ -218,7 +217,7 @@ export default function Signup() {
         </form>
 
         {/* Trust signals */}
-        <div className="flex items-center justify-center gap-5 mt-5 pt-4 border-t border-line">
+        <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-line">
           {['Free to start', 'No credit card', '5-min setup'].map(t => (
             <div key={t} className="flex items-center gap-1.5">
               <Check className="w-3 h-3 text-success flex-shrink-0" />
