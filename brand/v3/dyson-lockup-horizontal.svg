@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160">
-  <g transform="translate(40 20)">
-    <circle cx="38" cy="42" r="13" fill="#0F0F0F"/>
-    <circle cx="82" cy="42" r="13" fill="#0F0F0F"/>
-    <circle cx="60" cy="80" r="13" fill="#0F0F0F"/>
-  </g>
-  <text x="180" y="108" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="76" font-weight="500" letter-spacing="-3.4" fill="#0F0F0F">Dyson</text>
-</svg>
