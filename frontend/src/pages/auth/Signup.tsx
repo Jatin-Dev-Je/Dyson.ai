@@ -1,88 +1,113 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, ArrowRight, Loader2, Check } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check } from 'lucide-react'
 import { AuthLayout } from './AuthLayout'
+import { OAuthButton } from '@/components/shared/OAuthButton'
 import { authApi, ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-function Field({ label, hint, error, children }: {
-  label: string; hint?: string; error?: string | undefined; children: React.ReactNode
+function toSlug(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null
+  const checks = [password.length >= 8, /[A-Z]/.test(password), /[0-9!@#$%]/.test(password)]
+  const score   = checks.filter(Boolean).length
+  const bars    = ['bg-danger', 'bg-warning', 'bg-success']
+  const labels  = ['Weak', 'Fair', 'Strong']
+  const colors  = ['text-danger', 'text-warning', 'text-success']
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1 mb-1.5">
+        {[0, 1, 2].map(i => (
+          <div key={i} className={cn('flex-1 h-[3px] rounded-full transition-all duration-300',
+            i < score ? bars[score - 1] : 'bg-line')} />
+        ))}
+      </div>
+      <p className={cn('text-[11px] font-medium', colors[score - 1] ?? 'text-ink-4')}>
+        {labels[score - 1] ?? 'Too short'}
+      </p>
+    </div>
+  )
+}
+
+function InputField({
+  label, placeholder, type = 'text', value, onChange, error, autoFocus, prefix, readOnly, hint, autoComplete,
+}: {
+  label: string; placeholder?: string; type?: string; value: string
+  onChange?: (v: string) => void; error?: string | undefined; autoFocus?: boolean
+  prefix?: string; readOnly?: boolean; hint?: string | undefined; autoComplete?: string
 }) {
+  const [showPw, setShowPw] = useState(false)
+  const isPassword = type === 'password'
+  const inputType = isPassword ? (showPw ? 'text' : 'password') : type
+
   return (
     <div>
       <div className="flex items-baseline justify-between mb-1.5">
         <label className="text-[12px] font-medium text-ink-2">{label}</label>
         {hint && <span className="text-[11px] text-ink-4">{hint}</span>}
       </div>
-      {children}
-      {error && <p className="text-[11px] text-danger mt-1">{error}</p>}
-    </div>
-  )
-}
-
-function Input({ error, className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
-  return (
-    <input
-      {...props}
-      className={cn(
-        'w-full h-9 px-3 rounded-md border text-[13px] text-ink-1 bg-surface placeholder:text-ink-4',
-        'outline-none transition-all',
-        error
-          ? 'border-danger/50 focus:border-danger focus:ring-2 focus:ring-danger/10'
-          : 'border-line hover:border-line-strong focus:border-primary/50 focus:ring-2 focus:ring-primary/10',
-        className
-      )}
-    />
-  )
-}
-
-function toSlug(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
-}
-
-function PasswordStrength({ password }: { password: string }) {
-  if (!password) return null
-  const score = [password.length >= 8, /[A-Z]/.test(password), /[0-9]/.test(password)].filter(Boolean).length
-  const label = ['', 'Weak', 'Fair', 'Strong'][score] ?? ''
-  const color = ['', 'bg-danger', 'bg-warning', 'bg-success'][score] ?? ''
-  const textColor = ['', 'text-danger', 'text-warning', 'text-success'][score] ?? ''
-  return (
-    <div className="mt-1.5">
-      <div className="flex gap-1 mb-1">
-        {[0, 1, 2].map(i => (
-          <div key={i} className={cn('flex-1 h-0.5 rounded-full transition-all', i < score ? color : 'bg-line')} />
-        ))}
+      <div className={cn('flex items-center rounded-lg border bg-white transition-all overflow-hidden',
+        error ? 'border-danger/60 ring-2 ring-danger/10' : 'border-line hover:border-line-strong focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10'
+      )}>
+        {prefix && (
+          <span className="pl-3.5 pr-1 text-[13px] text-ink-4 select-none flex-shrink-0">{prefix}</span>
+        )}
+        <input
+          type={inputType}
+          placeholder={placeholder}
+          value={value}
+          readOnly={readOnly}
+          autoFocus={autoFocus}
+          autoComplete={autoComplete}
+          onChange={e => onChange?.(e.target.value)}
+          className={cn(
+            'flex-1 h-10 px-3.5 bg-transparent text-[13.5px] text-ink-1 placeholder:text-ink-4 outline-none',
+            prefix && 'pl-0',
+            readOnly && 'text-ink-3 cursor-default',
+            isPassword && 'pr-11'
+          )}
+        />
+        {isPassword && (
+          <button type="button" onClick={() => setShowPw(v => !v)}
+            className="absolute right-3.5 text-ink-4 hover:text-ink-2 transition-colors">
+            {showPw ? <EyeOff className="w-[17px] h-[17px]" /> : <Eye className="w-[17px] h-[17px]" />}
+          </button>
+        )}
       </div>
-      <p className={cn('text-[10px] font-medium', textColor)}>{label} password</p>
+      {error && <p className="text-[11.5px] text-danger mt-1.5">{error}</p>}
     </div>
   )
 }
 
 export default function Signup() {
   const navigate = useNavigate()
-  const [name,           setName]           = useState('')
-  const [email,          setEmail]          = useState('')
-  const [password,       setPassword]       = useState('')
-  const [workspaceName,  setWorkspaceName]  = useState('')
-  const [workspaceSlug,  setWorkspaceSlug]  = useState('')
-  const [slugTouched,    setSlugTouched]    = useState(false)
-  const [showPw,         setShowPw]         = useState(false)
-  const [loading,        setLoading]        = useState(false)
-  const [apiError,       setApiError]       = useState<string | null>(null)
-  const [errors,         setErrors]         = useState<Record<string, string>>({})
+
+  const [name,          setName]          = useState('')
+  const [email,         setEmail]         = useState('')
+  const [password,      setPassword]      = useState('')
+  const [workspaceName, setWorkspaceName] = useState('')
+  const [workspaceSlug, setWorkspaceSlug] = useState('')
+  const [slugTouched,   setSlugTouched]   = useState(false)
+  const [loading,       setLoading]       = useState(false)
+  const [apiError,      setApiError]      = useState<string | null>(null)
+  const [errors,        setErrors]        = useState<Record<string, string | undefined>>({})
 
   function handleWorkspaceName(val: string) {
     setWorkspaceName(val)
     if (!slugTouched) setWorkspaceSlug(toSlug(val))
+    setErrors(v => ({ ...v, workspaceName: undefined }))
   }
 
   function validate() {
     const e: Record<string, string> = {}
-    if (!name.trim())                e.name          = 'Name is required'
-    if (!email.includes('@'))        e.email         = 'Enter a valid email'
-    if (password.length < 8)         e.password      = 'At least 8 characters'
-    if (!workspaceName.trim())       e.workspaceName = 'Workspace name is required'
-    if (!/^[a-z0-9-]{2,50}$/.test(workspaceSlug)) e.workspaceSlug = 'Lowercase letters, numbers, and hyphens'
+    if (!name.trim())                              e.name          = 'Required'
+    if (!email.includes('@'))                      e.email         = 'Enter a valid email'
+    if (password.length < 8)                       e.password      = 'At least 8 characters'
+    if (!workspaceName.trim())                     e.workspaceName = 'Required'
+    if (!/^[a-z0-9-]{2,50}$/.test(workspaceSlug)) e.workspaceSlug = 'Lowercase letters and hyphens only'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -100,9 +125,9 @@ export default function Signup() {
       navigate('/app', { replace: true })
     } catch (err) {
       if (err instanceof ApiError && err.code === 'SLUG_TAKEN') {
-        setErrors(v => ({ ...v, workspaceSlug: 'This URL is already taken' }))
+        setErrors(v => ({ ...v, workspaceSlug: 'This URL is already taken — try another' }))
       } else {
-        setApiError(err instanceof ApiError ? err.message : 'Something went wrong — please try again.')
+        setApiError(err instanceof ApiError ? err.message : 'Something went wrong — try again.')
       }
     } finally {
       setLoading(false)
@@ -110,86 +135,108 @@ export default function Signup() {
   }
 
   return (
-    <AuthLayout title="Create your account" subtitle="Set up Dyson for your engineering team.">
-      {apiError && (
-        <div className="mb-4 px-3 py-2.5 rounded-md bg-red-50 border border-red-200 text-[12.5px] text-danger">
-          {apiError}
+    <AuthLayout>
+      <div className="px-8 pt-8 pb-7">
+
+        {/* Header */}
+        <div className="mb-7">
+          <h1 className="text-[22px] font-semibold text-ink-1 tracking-tight mb-1">Create your account</h1>
+          <p className="text-[13.5px] text-ink-3">Set up Dyson for your engineering team</p>
         </div>
-      )}
 
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <Field label="Full name" error={errors.name}>
-          <Input type="text" placeholder="Alex Kumar" autoFocus
-            value={name} error={!!errors.name}
-            onChange={e => { setName(e.target.value); setErrors(v => ({ ...v, name: '' })) }} />
-        </Field>
+        {/* OAuth */}
+        <div className="space-y-2.5 mb-6">
+          <OAuthButton provider="google" />
+          <OAuthButton provider="github" />
+        </div>
 
-        <Field label="Work email" error={errors.email}>
-          <Input type="email" placeholder="alex@company.com"
-            value={email} error={!!errors.email}
-            onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }} />
-        </Field>
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px bg-line" />
+          <span className="text-[12px] text-ink-4 font-medium">or continue with email</span>
+          <div className="flex-1 h-px bg-line" />
+        </div>
 
-        <Field label="Password" error={errors.password}>
-          <div className="relative">
-            <Input type={showPw ? 'text' : 'password'} placeholder="Minimum 8 characters"
-              value={password} error={!!errors.password} className="pr-9"
-              onChange={e => { setPassword(e.target.value); setErrors(v => ({ ...v, password: '' })) }} />
-            <button type="button" onClick={() => setShowPw(v => !v)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-4 hover:text-ink-2 transition-colors">
-              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+        {/* API error */}
+        {apiError && (
+          <div className="mb-5 flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-red-50 border border-red-200">
+            <div className="w-1.5 h-1.5 rounded-full bg-danger mt-1.5 flex-shrink-0" />
+            <p className="text-[12.5px] text-danger leading-relaxed">{apiError}</p>
           </div>
-          <PasswordStrength password={password} />
-        </Field>
+        )}
 
-        <div className="border-t border-line pt-4">
-          <p className="text-[11.5px] text-ink-3 mb-3">Workspace details</p>
-          <div className="space-y-3">
-            <Field label="Workspace name" error={errors.workspaceName}>
-              <Input type="text" placeholder="Acme Engineering"
-                value={workspaceName} error={!!errors.workspaceName}
-                onChange={e => { handleWorkspaceName(e.target.value); setErrors(v => ({ ...v, workspaceName: '' })) }} />
-            </Field>
+        {/* Form */}
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="space-y-4">
 
-            <Field label="Workspace URL" error={errors.workspaceSlug}>
-              <div className="flex items-center gap-1">
-                <span className="text-[12px] text-ink-3 flex-shrink-0">dyson.ai/</span>
-                <Input type="text" placeholder="acme-eng" className="flex-1"
-                  value={workspaceSlug} error={!!errors.workspaceSlug}
-                  onChange={e => {
+            {/* Name + Email row */}
+            <div className="grid grid-cols-2 gap-3">
+              <InputField label="Full name" placeholder="Alex Kumar" autoFocus
+                value={name} error={errors.name}
+                onChange={v => { setName(v); setErrors(e => ({ ...e, name: undefined })) }} />
+              <InputField label="Work email" type="email" placeholder="alex@co.com"
+                autoComplete="email" value={email} error={errors.email}
+                onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: undefined })) }} />
+            </div>
+
+            {/* Password */}
+            <div className="relative">
+              <InputField label="Password" type="password" placeholder="Minimum 8 characters"
+                autoComplete="new-password" value={password} error={errors.password}
+                onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: undefined })) }} />
+              <div className="mt-1"><PasswordStrength password={password} /></div>
+            </div>
+
+            {/* Workspace section */}
+            <div className="pt-1 border-t border-line">
+              <p className="text-[11px] font-semibold text-ink-4 uppercase tracking-[0.06em] mb-3 mt-3">
+                Workspace
+              </p>
+              <div className="space-y-3">
+                <InputField label="Workspace name" placeholder="Acme Engineering"
+                  value={workspaceName} error={errors.workspaceName}
+                  onChange={handleWorkspaceName} />
+                <InputField label="Workspace URL" prefix="dyson.ai/"
+                  placeholder="acme-eng" value={workspaceSlug} error={errors.workspaceSlug}
+                  hint={workspaceSlug ? `/${workspaceSlug}` : undefined}
+                  onChange={v => {
                     setSlugTouched(true)
-                    setWorkspaceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-                    setErrors(v => ({ ...v, workspaceSlug: '' }))
+                    setWorkspaceSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                    setErrors(e => ({ ...e, workspaceSlug: undefined }))
                   }} />
               </div>
-            </Field>
+            </div>
+
+            {/* Submit */}
+            <button type="submit" disabled={loading}
+              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg bg-primary text-[13.5px] font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm mt-2">
+              {loading
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account…</>
+                : 'Create account'}
+            </button>
           </div>
+        </form>
+
+        {/* Trust signals */}
+        <div className="flex items-center justify-center gap-5 mt-5 pt-4 border-t border-line">
+          {['Free to start', 'No credit card', '5-min setup'].map(t => (
+            <div key={t} className="flex items-center gap-1.5">
+              <Check className="w-3 h-3 text-success flex-shrink-0" />
+              <span className="text-[11.5px] text-ink-3">{t}</span>
+            </div>
+          ))}
         </div>
-
-        <button type="submit" disabled={loading}
-          className="w-full h-9 flex items-center justify-center gap-2 rounded-md bg-primary text-[13px] font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
-          {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" />Creating account…</>
-            : <><span>Create account</span><ArrowRight className="w-4 h-4" /></>}
-        </button>
-      </form>
-
-      <div className="mt-5 pt-4 border-t border-line space-y-1.5">
-        {['Free for up to 5 users', 'Slack + GitHub connected in minutes', 'No credit card required'].map(p => (
-          <div key={p} className="flex items-center gap-2">
-            <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
-            <span className="text-[12px] text-ink-3">{p}</span>
-          </div>
-        ))}
       </div>
 
-      <p className="text-[12.5px] text-ink-3 mt-5 text-center">
-        Already have an account?{' '}
-        <Link to="/login" className="text-primary hover:text-primary-hover font-medium transition-colors">
-          Sign in
-        </Link>
-      </p>
+      {/* Card footer */}
+      <div className="px-8 py-4 border-t border-line bg-[#FAFAF8] text-center">
+        <p className="text-[13px] text-ink-3">
+          Already have an account?{' '}
+          <Link to="/login" className="text-primary font-medium hover:text-primary-hover transition-colors">
+            Sign in
+          </Link>
+        </p>
+      </div>
     </AuthLayout>
   )
 }
