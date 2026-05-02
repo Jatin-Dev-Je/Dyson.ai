@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 
-import Landing        from '@/pages/Landing'
 import NotFound       from '@/pages/NotFound'
 import Login          from '@/pages/auth/Login'
 import Signup         from '@/pages/auth/Signup'
@@ -35,29 +34,26 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Public */}
-          <Route path="/"       element={<Landing />} />
+          {/* / redirects straight to login */}
+          <Route path="/"       element={<Navigate to="/login" replace />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login"  element={<Login />} />
 
-          {/* Onboarding — protected but separate shell */}
           <Route path="/onboarding" element={
             <ProtectedRoute><Onboarding /></ProtectedRoute>
           } />
 
-          {/* App */}
           <Route path="/app" element={
             <ProtectedRoute><AppShell /></ProtectedRoute>
           }>
-            <Route index                   element={<Dashboard />} />
-            <Route path="dashboard"        element={<Dashboard />} />
-            <Route path="recall"           element={<Recall />} />
-            <Route path="decisions"        element={<DecisionLog />} />
-            <Route path="onboarding-packs" element={<OnboardingPacks />} />
+            <Route index                       element={<Dashboard />} />
+            <Route path="dashboard"            element={<Dashboard />} />
+            <Route path="recall"               element={<Recall />} />
+            <Route path="decisions"            element={<DecisionLog />} />
+            <Route path="onboarding-packs"     element={<OnboardingPacks />} />
             <Route path="onboarding-packs/:id" element={<PackDetail />} />
-            <Route path="search"           element={<GlobalSearch />} />
+            <Route path="search"               element={<GlobalSearch />} />
 
-            {/* Settings */}
             <Route path="settings" element={<SettingsLayout />}>
               <Route index                element={<Navigate to="profile" replace />} />
               <Route path="profile"       element={<Profile />} />
@@ -75,7 +71,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-      <Toaster theme="dark" position="bottom-right" />
+      <Toaster position="bottom-right" />
     </QueryClientProvider>
   )
 }
