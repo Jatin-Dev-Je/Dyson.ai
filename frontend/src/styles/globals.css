@@ -4,34 +4,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design tokens ──────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    /* Backgrounds — warm neutral, NOT blue-tinted */
-    --bg-base:    #141414;   /* page background     */
-    --bg-surface: #1C1C1C;   /* card, panel         */
-    --bg-raised:  #222222;   /* dropdown, modal     */
-    --bg-overlay: #2A2A2A;   /* elevated surfaces   */
+    --bg-canvas:  #FAFAF9;
+    --bg-surface: #FFFFFF;
+    --bg-subtle:  #F7F6F3;
+    --bg-hover:   rgba(0,0,0,0.03);
 
-    /* Borders */
-    --border-subtle: #2E2E2E; /* default             */
-    --border-strong: #3D3D3D; /* hover / focus       */
+    --border:       #E8E7E5;
+    --border-strong:#D4D3CF;
 
-    /* Brand */
-    --primary:    #6366F1;
-    --primary-fg: #ffffff;
-    --citation:   #F59E0B;
+    --ink-1: #1A1A1A;
+    --ink-2: #575553;
+    --ink-3: #8B8985;
+    --ink-4: #C4C3C0;
 
-    /* Text */
-    --text-1: #E8E8E8;   /* primary   */
-    --text-2: #A0A0A0;   /* secondary */
-    --text-3: #636363;   /* muted     */
-    --text-4: #404040;   /* disabled  */
+    --primary:      #5B5BD6;
+    --primary-hover:#4F4FBF;
+    --primary-light: rgba(91,91,214,0.08);
 
-    /* Functional */
-    --success: #22C55E;
-    --warning: #F59E0B;
-    --danger:  #EF4444;
+    --success: #16A34A;
+    --warning: #D97706;
+    --danger:  #DC2626;
+    --amber:   #D97706;
   }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -40,100 +35,48 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    scroll-behavior: smooth;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
-    background: var(--bg-base);
-    color: var(--text-1);
+    background: var(--bg-canvas);
+    color: var(--ink-1);
     font-family: 'GeistVariable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    overflow-x: hidden;
+    font-size: 13px;
+    line-height: 1.55;
   }
 
   ::selection {
-    background: rgba(99, 102, 241, 0.2);
-    color: #E8E8E8;
+    background: rgba(91,91,214,0.15);
+    color: #1A1A1A;
   }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track  { background: transparent; }
-  ::-webkit-scrollbar-thumb  { background: var(--border-subtle); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+  ::-webkit-scrollbar-thumb  { background: var(--border-strong); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+  a { color: inherit; text-decoration: none; }
 }
 
-/* ─── Utility classes ────────────────────────────────────────────────────── */
 @layer utilities {
-
-  /* Text gradients */
-  .text-gradient-white {
-    background: linear-gradient(180deg, #E8E8E8 0%, rgba(232,232,232,0.55) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .text-gradient-primary {
-    background: linear-gradient(135deg, #818CF8 0%, #6366F1 45%, #A78BFA 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .text-gradient-citation {
-    background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Glass */
-  .glass {
-    background: rgba(20, 20, 20, 0.85);
-    backdrop-filter: blur(16px) saturate(1.4);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  }
-
-  /* Skeleton shimmer */
+  /* Shimmer skeleton */
   .shimmer {
-    background: linear-gradient(90deg, #1C1C1C 25%, #252525 50%, #1C1C1C 75%);
+    background: linear-gradient(90deg, #F0EFED 25%, #E8E7E4 50%, #F0EFED 75%);
     background-size: 200% 100%;
     animation: shimmer 1.6s ease-in-out infinite;
   }
 
-  /* DysonMark connection-stroke draw — used by the linked/traced variants */
-  @keyframes dyson-draw {
-    to { stroke-dashoffset: 0; }
-  }
-
-  /* Editorial serif numerals for headlines */
-  .font-display { font-family: 'Instrument Serif', ui-serif, Georgia, serif; font-feature-settings: 'ss01', 'ss02'; }
-
-  /* Citation underline */
-  .cite {
-    text-decoration: underline;
-    text-decoration-color: rgba(245, 158, 11, 0.35);
-    text-underline-offset: 3px;
-    cursor: pointer;
-    transition: text-decoration-color 0.15s;
-  }
-  .cite:hover { text-decoration-color: rgba(245, 158, 11, 0.7); }
-
-  /* Surface tokens as utilities */
-  .bg-base    { background: var(--bg-base); }
-  .bg-surface { background: var(--bg-surface); }
-  .bg-raised  { background: var(--bg-raised); }
-
-  /* Border tokens */
-  .border-subtle { border-color: var(--border-subtle); }
-  .border-strong { border-color: var(--border-strong); }
-
-  /* Interactive row */
+  /* Subtle row hover — the Notion pattern */
   .row-hover {
-    transition: background-color 120ms ease;
+    transition: background 100ms ease;
   }
   .row-hover:hover {
-    background: rgba(255, 255, 255, 0.025);
+    background: var(--bg-hover);
+  }
+
+  /* Confidence bar track */
+  .conf-track {
+    background: var(--border);
   }
 }

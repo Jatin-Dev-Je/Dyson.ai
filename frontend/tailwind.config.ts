@@ -1,95 +1,91 @@
 import type { Config } from 'tailwindcss'
 
 export default {
-  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
-        sans:    ['GeistVariable', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        mono:    ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
-        serif:   ['"Instrument Serif"', 'ui-serif', 'Georgia', 'Cambria', 'serif'],
-        display: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
+        sans: ['GeistVariable', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
 
       colors: {
-        /* Backgrounds — warm neutral */
-        base:    '#141414',
-        surface: '#1C1C1C',
-        raised:  '#222222',
-        overlay: '#2A2A2A',
+        // Page / shell backgrounds
+        canvas:  '#FAFAF9',
+        surface: '#FFFFFF',
+        subtle:  '#F7F6F3',
+        hover:   'rgba(0,0,0,0.03)',
 
-        border: {
-          DEFAULT: '#2E2E2E',
-          strong:  '#3D3D3D',
+        // Borders
+        line: {
+          DEFAULT: '#E8E7E5',
+          strong:  '#D4D3CF',
         },
 
+        // Text hierarchy
+        ink: {
+          1: '#1A1A1A',
+          2: '#575553',
+          3: '#8B8985',
+          4: '#C4C3C0',
+        },
+
+        // Brand
         primary: {
-          DEFAULT: '#6366F1',
-          hover:   '#5558E3',
-          dim:     'rgba(99,102,241,0.12)',
-          fg:      '#ffffff',
+          DEFAULT: '#5B5BD6',
+          hover:   '#4F4FBF',
+          light:   'rgba(91,91,214,0.08)',
+          fg:      '#FFFFFF',
         },
 
-        citation: {
-          DEFAULT: '#F59E0B',
-          dim:     'rgba(245,158,11,0.12)',
-          hover:   '#D97706',
-        },
-
-        text: {
-          1: '#E8E8E8',
-          2: '#A0A0A0',
-          3: '#636363',
-          4: '#404040',
-        },
-
-        success: '#22C55E',
-        warning: '#F59E0B',
-        danger:  '#EF4444',
+        // Functional
+        success: '#16A34A',
+        warning: '#D97706',
+        danger:  '#DC2626',
+        amber:   '#D97706',
       },
 
       fontSize: {
-        '2xs': ['10px', { lineHeight: '14px', letterSpacing: '0.02em' }],
+        '2xs': ['10px', { lineHeight: '14px' }],
         'xs':  ['11px', { lineHeight: '16px' }],
         'sm':  ['12px', { lineHeight: '18px' }],
         'base':['13px', { lineHeight: '20px' }],
         'md':  ['14px', { lineHeight: '22px' }],
         'lg':  ['16px', { lineHeight: '24px' }],
-        'xl':  ['18px', { lineHeight: '26px' }],
-        '2xl': ['20px', { lineHeight: '28px' }],
-        '3xl': ['24px', { lineHeight: '32px' }],
+        'xl':  ['18px', { lineHeight: '28px' }],
+        '2xl': ['22px', { lineHeight: '30px' }],
+        '3xl': ['28px', { lineHeight: '36px' }],
+        '4xl': ['36px', { lineHeight: '44px' }],
+        '5xl': ['48px', { lineHeight: '56px' }],
       },
 
       borderRadius: {
-        sm:  '6px',
-        DEFAULT: '8px',
-        md:  '10px',
-        lg:  '12px',
-        xl:  '16px',
-        '2xl': '20px',
+        sm:     '4px',
+        DEFAULT:'6px',
+        md:     '8px',
+        lg:     '10px',
+        xl:     '12px',
+        '2xl':  '16px',
       },
 
       boxShadow: {
-        card:    '0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04)',
-        raised:  '0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)',
-        modal:   '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)',
-        primary: '0 0 20px rgba(99,102,241,0.2)',
+        sm:    '0 1px 2px rgba(0,0,0,0.05)',
+        card:  '0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
+        md:    '0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
+        lg:    '0 8px 24px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)',
+        modal: '0 24px 64px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)',
       },
 
       animation: {
-        'fade-in':    'fadeIn 0.2s ease forwards',
-        'slide-up':   'slideUp 0.3s cubic-bezier(0.16,1,0.3,1) forwards',
-        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
-        'shimmer':    'shimmer 1.6s ease-in-out infinite',
-        'spin-slow':  'spin 2s linear infinite',
+        'fade-in':  'fadeIn 0.15s ease',
+        'slide-up': 'slideUp 0.2s cubic-bezier(0.16,1,0.3,1)',
+        'shimmer':  'shimmer 1.6s ease-in-out infinite',
       },
 
       keyframes: {
-        fadeIn:    { from: { opacity: '0' }, to: { opacity: '1' } },
-        slideUp:   { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
-        pulseSoft: { '0%,100%': { opacity: '1' }, '50%': { opacity: '0.4' } },
-        shimmer:   { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        fadeIn:  { from: { opacity: '0' }, to: { opacity: '1' } },
+        slideUp: { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
       },
     },
   },
