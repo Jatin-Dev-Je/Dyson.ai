@@ -1,14 +1,15 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, createContext, useContext } from 'react'
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import {
   Brain, Network, Users, Search, Settings, ChevronDown,
-  LogOut, Plus, Bell, LayoutDashboard,
-  ChevronRight, Trash2,
+  LogOut, Plus, Bell, LayoutDashboard, ChevronLeft, ChevronRight, Trash2,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { authApi, tokens } from '@/lib/api'
 
-// ─── Real brand logos ──────────────────────────────────────────────────────
+// ─── Sidebar context ───────────────────────────────────────────────────────
+const SidebarCtx = createContext({ collapsed: false })
+
+// ─── Brand logos ──────────────────────────────────────────────────────────
 
 function SlackLogo({ size = 16 }: { size?: number }) {
   return (
@@ -21,9 +22,9 @@ function SlackLogo({ size = 16 }: { size?: number }) {
   )
 }
 
-function GitHubLogo({ size = 16, color = '#1a1a1a' }: { size?: number; color?: string }) {
+function GitHubLogo({ size = 16 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#24292f" aria-hidden="true">
       <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12Z"/>
     </svg>
   )
@@ -42,18 +43,17 @@ function LinearLogo({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <defs>
-        <linearGradient id="linear-grad" x1="0" x2="1" y1="0" y2="1">
+        <linearGradient id="lg-sb" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stopColor="#5E6AD2"/>
           <stop offset="100%" stopColor="#3F4ABE"/>
         </linearGradient>
       </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#linear-grad)"/>
+      <circle cx="50" cy="50" r="50" fill="url(#lg-sb)"/>
       <path d="M16 53 47 84M16 36 64 84M22 24 76 78M37 18 82 63M52 16 84 48M70 19 81 30" stroke="#fff" strokeWidth="6" strokeLinecap="round" fill="none" opacity=".95"/>
     </svg>
   )
 }
 
-// Dyson mark — three connected nodes forming a causal triangle
 function DysonMark({ size = 20 }: { size?: number }) {
   const r = Math.max(4, size * 0.22)
   return (
@@ -79,7 +79,7 @@ function DysonMark({ size = 20 }: { size?: number }) {
   )
 }
 
-// ─── Utilities ─────────────────────────────────────────────────────────────
+// ─── Utilities ────────────────────────────────────────────────────────────
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
   useEffect(() => {
@@ -91,120 +91,183 @@ function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => voi
   }, [ref, cb])
 }
 
+function IconBtn({ children, title, onClick, style: s }: {
+  children: React.ReactNode; title?: string
+  onClick?: () => void; style?: React.CSSProperties
+}) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 30, height: 30, borderRadius: 7,
+        border: 'none', background: hov ? 'rgba(0,0,0,0.06)' : 'transparent',
+        cursor: 'pointer', color: '#6b6b6b', transition: 'background 80ms',
+        ...s,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 // ─── Nav item ──────────────────────────────────────────────────────────────
+
 function NavItem({ to, icon: Icon, label, badge, exact = false }: {
   to: string; icon: React.ElementType; label: string
   badge?: number; exact?: boolean
 }) {
+  const { collapsed } = useContext(SidebarCtx)
   const location = useLocation()
   const active = exact
     ? location.pathname === to || location.pathname === to + '/'
     : location.pathname.startsWith(to)
+  const [hov, setHov] = useState(false)
 
   return (
-    <NavLink to={to} end={exact} style={{ textDecoration: 'none' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 7,
-        padding: '5px 8px', borderRadius: 6,
-        background: active ? 'rgba(0,0,0,0.06)' : 'transparent',
-        color: active ? '#1a1a1a' : '#6b6b6b',
-        fontSize: 13.5, fontWeight: active ? 500 : 400,
-        cursor: 'pointer', transition: 'background 80ms',
-        userSelect: 'none',
-      }}
-        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.04)' }}
-        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
+    <NavLink to={to} end={exact} style={{ textDecoration: 'none' }} title={collapsed ? label : undefined}>
+      <div
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          display: 'flex', alignItems: 'center',
+          gap: collapsed ? 0 : 8,
+          padding: collapsed ? 0 : '5px 9px',
+          width: collapsed ? 34 : 'auto',
+          height: collapsed ? 34 : 'auto',
+          margin: collapsed ? '0 auto 1px' : '0 0 1px',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          borderRadius: 7,
+          background: active
+            ? 'rgba(91,91,214,0.10)'
+            : hov ? 'rgba(0,0,0,0.05)' : 'transparent',
+          color: active ? '#1a1a1a' : '#3a3a3a',
+          fontSize: 13, fontWeight: active ? 500 : 400,
+          cursor: 'pointer', transition: 'background 80ms',
+          userSelect: 'none',
+        }}
       >
-        <Icon size={15} style={{ color: active ? '#1a1a1a' : '#9b9b9b', flexShrink: 0 }} />
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-        {badge !== undefined && badge > 0 && (
-          <span style={{
-            fontSize: 10, fontWeight: 500, color: '#9b9b9b',
-            background: 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: 4,
-          }}>{badge}</span>
+        <Icon
+          size={15}
+          style={{ color: active ? '#5B5BD6' : hov ? '#2a2a2a' : '#5a5a5a', flexShrink: 0 }}
+        />
+        {!collapsed && (
+          <>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {label}
+            </span>
+            {badge !== undefined && badge > 0 && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, color: '#5B5BD6',
+                background: 'rgba(91,91,214,0.10)',
+                padding: '1px 6px', borderRadius: 99,
+              }}>{badge}</span>
+            )}
+          </>
         )}
       </div>
     </NavLink>
   )
 }
 
-// ─── Section label ─────────────────────────────────────────────────────────
-function SidebarSection({ label, children, defaultOpen = true }: {
-  label: string; children: React.ReactNode; defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
+// ─── Section header ────────────────────────────────────────────────────────
+
+function SectionLabel({ label }: { label: string }) {
+  const { collapsed } = useContext(SidebarCtx)
+  if (collapsed) return <div style={{ height: 14 }} />
   return (
-    <div>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 4,
-          padding: '4px 8px', border: 'none', background: 'transparent',
-          color: '#a0a0a0', fontSize: 11, fontWeight: 600,
-          textTransform: 'uppercase', letterSpacing: '0.05em',
-          cursor: 'pointer', borderRadius: 6, userSelect: 'none',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.03)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-      >
-        <ChevronRight size={11} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms', color: '#b0b0b0', flexShrink: 0 }} />
-        {label}
-      </button>
-      {open && <div style={{ marginTop: 2 }}>{children}</div>}
-    </div>
+    <p style={{
+      fontSize: 10, fontWeight: 700, color: '#9a9a9a',
+      textTransform: 'uppercase', letterSpacing: '0.07em',
+      margin: '14px 0 4px 9px',
+    }}>
+      {label}
+    </p>
   )
 }
 
-// ─── Source item with real brand logo ──────────────────────────────────────
+// ─── Source item ──────────────────────────────────────────────────────────
+
 function SourceItem({ name, logo, connected }: {
   name: string; logo: React.ReactNode; connected: boolean
 }) {
+  const { collapsed } = useContext(SidebarCtx)
   const [hov, setHov] = useState(false)
+
   return (
-    <Link to="/app/settings/sources" style={{ textDecoration: 'none' }}>
+    <Link to="/app/settings/sources" style={{ textDecoration: 'none' }} title={collapsed ? name : undefined}>
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '5px 8px', borderRadius: 6,
-          background: hov ? 'rgba(0,0,0,0.04)' : 'transparent',
+          display: 'flex', alignItems: 'center',
+          gap: collapsed ? 0 : 8,
+          padding: collapsed ? 0 : '5px 9px',
+          width: collapsed ? 34 : 'auto',
+          height: collapsed ? 34 : 'auto',
+          margin: collapsed ? '0 auto 1px' : '0 0 1px',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          borderRadius: 7,
+          background: hov ? 'rgba(0,0,0,0.05)' : 'transparent',
           cursor: 'pointer', transition: 'background 80ms',
         }}
       >
-        {/* Brand logo in a small box */}
         <div style={{
           width: 18, height: 18, borderRadius: 4,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: connected ? 'white' : '#f0efed',
-          border: '1px solid #e8e7e5',
-          flexShrink: 0, opacity: connected ? 1 : 0.45,
+          background: connected ? 'white' : '#f2f1ef',
+          border: '1px solid #e4e3e0',
+          flexShrink: 0, opacity: connected ? 1 : 0.5,
           overflow: 'hidden',
         }}>
           {logo}
         </div>
-        <span style={{
-          flex: 1, fontSize: 13.5,
-          color: connected ? '#6b6b6b' : '#b0b0b0',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{name}</span>
-        {connected
-          ? <span style={{ width: 6, height: 6, borderRadius: 99, background: '#16A34A', flexShrink: 0 }} />
-          : hov && <span style={{ fontSize: 10, color: '#9b9b9b', flexShrink: 0 }}>Connect</span>
-        }
+        {!collapsed && (
+          <>
+            <span style={{
+              flex: 1, fontSize: 13,
+              color: connected ? '#3a3a3a' : '#9a9a9a',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {name}
+            </span>
+            {connected
+              ? <span style={{ width: 5, height: 5, borderRadius: 99, background: '#16A34A', flexShrink: 0 }} />
+              : hov && <span style={{ fontSize: 10, color: '#aaa', flexShrink: 0 }}>Connect</span>
+            }
+          </>
+        )}
       </div>
     </Link>
   )
 }
 
 // ─── Workspace switcher ────────────────────────────────────────────────────
+
 function WorkspaceSwitcher() {
+  const { collapsed } = useContext(SidebarCtx)
   const [open, setOpen] = useState(false)
   const ref             = useRef<HTMLDivElement>(null)
   useOutsideClick(ref, () => setOpen(false))
+  const user = authApi.getUser()
 
-  const user    = authApi.getUser()
-  const initial = (user?.name ?? 'W')[0]?.toUpperCase() ?? 'W'
+  if (collapsed) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 6px' }}>
+        <button
+          onClick={() => setOpen(v => !v)}
+          title="Dyson workspace"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <DysonMark size={26} />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -212,28 +275,33 @@ function WorkspaceSwitcher() {
         onClick={() => setOpen(v => !v)}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          padding: '6px 8px', border: 'none', borderRadius: 6,
-          background: open ? 'rgba(0,0,0,0.04)' : 'transparent',
+          padding: '7px 8px', border: 'none', borderRadius: 7,
+          background: open ? 'rgba(0,0,0,0.05)' : 'transparent',
           cursor: 'pointer',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.04)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.05)' }}
         onMouseLeave={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
       >
         <DysonMark size={22} />
-        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: '#1a1a1a', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{
+          flex: 1, fontSize: 13.5, fontWeight: 600, color: '#1a1a1a',
+          textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
           Dyson
         </span>
-        <ChevronDown size={13} style={{ color: '#b0b0b0', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms', flexShrink: 0 }} />
+        <ChevronDown size={13} style={{ color: '#aaa', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms', flexShrink: 0 }} />
       </button>
 
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', left: 8, right: 8, marginTop: 4, zIndex: 50,
+          position: 'absolute', top: '100%', left: 6, right: 6, marginTop: 4, zIndex: 50,
           background: 'white', border: '1px solid #E8E7E5', borderRadius: 10,
           boxShadow: '0 8px 24px rgba(0,0,0,0.10)', padding: 4,
         }}>
           <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F0EFED', marginBottom: 4 }}>
-            <p style={{ fontSize: 10.5, color: '#9b9b9b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500, margin: 0, marginBottom: 6 }}>{user?.email}</p>
+            <p style={{ fontSize: 10.5, color: '#9b9b9b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500, margin: 0, marginBottom: 6 }}>
+              {user?.email}
+            </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <DysonMark size={20} />
               <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a1a' }}>Dyson</span>
@@ -250,7 +318,7 @@ function WorkspaceSwitcher() {
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1' }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
-            <Plus size={13} /> Create or join a workspace
+            <Plus size={13} /> Create or join workspace
           </button>
         </div>
       )}
@@ -259,7 +327,9 @@ function WorkspaceSwitcher() {
 }
 
 // ─── User menu ─────────────────────────────────────────────────────────────
+
 function UserMenu() {
+  const { collapsed } = useContext(SidebarCtx)
   const [open, setOpen] = useState(false)
   const ref             = useRef<HTMLDivElement>(null)
   const navigate        = useNavigate()
@@ -276,48 +346,73 @@ function UserMenu() {
     void authApi.logout()
   }
 
+  const avatar = (
+    <div style={{
+      width: 24, height: 24, borderRadius: 99, flexShrink: 0,
+      background: 'linear-gradient(135deg, #5B5BD6, #8a8aff)',
+      color: 'white', fontSize: 10, fontWeight: 700,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {initials || 'U'}
+    </div>
+  )
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(v => !v)}
+        title={collapsed ? name : undefined}
         style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          padding: '5px 8px', border: 'none', borderRadius: 6,
-          background: open ? 'rgba(0,0,0,0.04)' : 'transparent',
+          display: 'flex', alignItems: 'center',
+          gap: collapsed ? 0 : 8,
+          padding: collapsed ? 0 : '5px 8px',
+          width: collapsed ? 34 : '100%',
+          height: collapsed ? 34 : 'auto',
+          margin: collapsed ? '0 auto' : '0',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          border: 'none', borderRadius: 7,
+          background: open ? 'rgba(0,0,0,0.05)' : 'transparent',
           cursor: 'pointer',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.04)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.05)' }}
         onMouseLeave={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
       >
-        <div style={{
-          width: 22, height: 22, borderRadius: 99, flexShrink: 0,
-          background: 'linear-gradient(135deg, #5B5BD6, #8a8aff)',
-          color: 'white', fontSize: 10, fontWeight: 700,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>{initials || 'U'}</div>
-        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: '#1a1a1a', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-        <ChevronDown size={13} style={{ color: '#b0b0b0', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms', flexShrink: 0 }} />
+        {avatar}
+        {!collapsed && (
+          <>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#2a2a2a', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {name}
+            </span>
+            <ChevronDown size={12} style={{ color: '#aaa', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms', flexShrink: 0 }} />
+          </>
+        )}
       </button>
 
       {open && (
         <div style={{
-          position: 'absolute', bottom: '100%', left: 8, right: 8, marginBottom: 4, zIndex: 50,
+          position: 'absolute',
+          bottom: collapsed ? 0 : '100%',
+          left: collapsed ? 44 : 6,
+          right: collapsed ? 'auto' : 6,
+          width: collapsed ? 204 : 'auto',
+          marginBottom: collapsed ? 0 : 4,
+          zIndex: 50,
           background: 'white', border: '1px solid #E8E7E5', borderRadius: 10,
           boxShadow: '0 8px 24px rgba(0,0,0,0.10)', padding: 4,
         }}>
           <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F0EFED', marginBottom: 4 }}>
-            <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{name}</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{name}</p>
             {email && <p style={{ fontSize: 11, color: '#9b9b9b', margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</p>}
           </div>
           <button
             onClick={() => { navigate('/app/settings/profile'); setOpen(false) }}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
-              fontSize: 13, color: '#6b6b6b', border: 'none', background: 'transparent',
+              fontSize: 13, color: '#454545', border: 'none', background: 'transparent',
               cursor: 'pointer', borderRadius: 6, textAlign: 'left',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1'; (e.currentTarget as HTMLButtonElement).style.color = '#1a1a1a' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b6b6b' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#454545' }}
           >
             <Settings size={13} style={{ color: '#9b9b9b', flexShrink: 0 }} />
             Settings
@@ -341,7 +436,8 @@ function UserMenu() {
   )
 }
 
-// ─── Topbar ─────────────────────────────────────────────────────────────────
+// ─── Topbar ───────────────────────────────────────────────────────────────
+
 function Topbar() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -359,13 +455,13 @@ function Topbar() {
       height: 44, flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 20px',
-      borderBottom: '1px solid #E8E7E5',
-      background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
+      borderBottom: '1px solid #EEEDE9',
+      background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(8px)',
       position: 'sticky', top: 0, zIndex: 20,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5 }}>
-        <span style={{ color: '#9b9b9b' }}>Dyson</span>
-        <span style={{ color: '#d0d0d0', margin: '0 2px' }}>/</span>
+        <span style={{ color: '#b0b0b0' }}>Dyson</span>
+        <span style={{ color: '#d8d7d5', margin: '0 2px' }}>/</span>
         <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{title}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -379,147 +475,207 @@ function Topbar() {
         >
           <Brain size={13} /> Recall
         </button>
-        <button style={{
-          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: 'none', borderRadius: 6, background: 'transparent', color: '#9b9b9b', cursor: 'pointer',
-        }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1'; (e.currentTarget as HTMLButtonElement).style.color = '#1a1a1a' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#9b9b9b' }}
-        >
+        <IconBtn title="Notifications">
           <Bell size={15} />
-        </button>
+        </IconBtn>
       </div>
     </header>
   )
 }
 
-// ─── App shell ─────────────────────────────────────────────────────────────
+// ─── App shell ────────────────────────────────────────────────────────────
+
 export default function AppShell() {
-  const location   = useLocation()
-  const navigate   = useNavigate()
-  const isSettings = location.pathname.startsWith('/app/settings')
+  const location    = useLocation()
+  const navigate    = useNavigate()
+  const isSettings  = location.pathname.startsWith('/app/settings')
+  const [collapsed, setCollapsed] = useState(false)
+
+  const W = collapsed ? 56 : 240
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#FAFAF8', overflow: 'hidden', position: 'relative' }}>
+    <SidebarCtx.Provider value={{ collapsed }}>
+      <div style={{ display: 'flex', height: '100vh', background: '#FAFAF8', overflow: 'hidden', position: 'relative' }}>
 
-      {/* Sidebar */}
-      <aside style={{
-        width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        background: '#F7F6F3', borderRight: '1px solid #E8E7E5',
-        overflow: 'hidden', userSelect: 'none',
-      }}>
+        {/* ── Sidebar ─────────────────────────────────────────────────── */}
+        <aside style={{
+          width: W, flexShrink: 0, display: 'flex', flexDirection: 'column',
+          background: '#F7F6F3', borderRight: '1px solid #E8E7E5',
+          overflow: 'hidden', userSelect: 'none',
+          transition: 'width 200ms cubic-bezier(0.4,0,0.2,1)',
+        }}>
 
-        {/* Workspace */}
-        <div style={{ padding: '12px 8px 4px' }}>
-          <WorkspaceSwitcher />
-        </div>
-
-        {/* Quick actions */}
-        <div style={{ padding: '0 8px 4px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {[
-            { to: '/app/search', icon: Search, label: 'Search', shortcut: '⌘K' },
-          ].map(item => (
-            <Link key={item.to} to={item.to} style={{ textDecoration: 'none' }}>
-              <div
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  padding: '5px 8px', borderRadius: 6, cursor: 'pointer',
-                  color: '#6b6b6b', fontSize: 13.5, transition: 'background 80ms',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.color = '#1a1a1a' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#6b6b6b' }}
-              >
-                <item.icon size={15} style={{ color: '#9b9b9b', flexShrink: 0 }} />
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {item.shortcut && <kbd style={{ fontSize: 10, color: '#c0c0c0', fontFamily: 'monospace' }}>{item.shortcut}</kbd>}
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        <div style={{ margin: '4px 12px', borderTop: '1px solid #E8E7E5' }} />
-
-        {/* Main nav */}
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <NavItem to="/app"                   icon={LayoutDashboard} label="Home"           exact />
-          <NavItem to="/app/recall"            icon={Brain}           label="Recall"         />
-          <NavItem to="/app/decisions"         icon={Network}         label="Memory Graph"   badge={8} />
-          <NavItem to="/app/onboarding-packs"  icon={Users}           label="Team Briefings" />
-
-          <div style={{ height: 8 }} />
-
-          {/* Sources with real logos */}
-          <SidebarSection label="Sources">
-            <SourceItem name="Slack"  logo={<SlackLogo size={13} />}  connected={true}  />
-            <SourceItem name="GitHub" logo={<GitHubLogo size={13} />} connected={true}  />
-            <SourceItem name="Notion" logo={<NotionLogo size={13} />} connected={false} />
-            <SourceItem name="Linear" logo={<LinearLogo size={13} />} connected={false} />
-            <Link to="/app/settings/sources" style={{ textDecoration: 'none' }}>
-              <div
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '5px 8px', borderRadius: 6, cursor: 'pointer',
-                  fontSize: 13.5, color: '#b0b0b0', transition: 'background 80ms',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.color = '#6b6b6b' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#b0b0b0' }}
-              >
-                <Plus size={13} style={{ color: '#c0c0c0' }} /> Add source
-              </div>
-            </Link>
-          </SidebarSection>
-        </nav>
-
-        {/* Bottom */}
-        <div style={{ padding: '8px', borderTop: '1px solid #E8E7E5', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: 7, padding: '5px 8px',
-            borderRadius: 6, border: 'none', background: 'transparent',
-            fontSize: 13.5, color: '#6b6b6b', cursor: 'pointer', textAlign: 'left',
-          }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.04)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-          >
-            <Trash2 size={15} style={{ color: '#9b9b9b', flexShrink: 0 }} /> Trash
-          </button>
-          <UserMenu />
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Topbar />
-        <main style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
-          {!isSettings && <Outlet />}
-        </main>
-      </div>
-
-      {/* Settings modal overlay */}
-      {isSettings && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => navigate('/app')}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 100,
-              background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(2px)',
-              cursor: 'pointer',
-            }}
-          />
-          {/* Modal card */}
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 101,
-            width: 'min(92vw, 980px)', height: 'min(88vh, 720px)',
-            background: 'white', borderRadius: 14,
-            display: 'flex', overflow: 'hidden',
-            boxShadow: '0 28px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)',
-          }}>
-            <Outlet />
+          {/* Workspace */}
+          <div style={{ padding: collapsed ? '0 11px 4px' : '10px 8px 4px', flexShrink: 0 }}>
+            <WorkspaceSwitcher />
           </div>
-        </>
-      )}
-    </div>
+
+          {/* Search quick action */}
+          {!collapsed ? (
+            <div style={{ padding: '0 8px 2px' }}>
+              <Link to="/app/search" style={{ textDecoration: 'none' }}>
+                <div
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '5px 9px', borderRadius: 7, cursor: 'pointer',
+                    color: '#3a3a3a', fontSize: 13, transition: 'background 80ms',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.05)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
+                >
+                  <Search size={14} style={{ color: '#6a6a6a', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>Search</span>
+                  <kbd style={{ fontSize: 10, color: '#c0c0c0', fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '1px 5px', borderRadius: 4 }}>⌘K</kbd>
+                </div>
+              </Link>
+            </div>
+          ) : (
+            <div style={{ padding: '0 11px 2px', display: 'flex', justifyContent: 'center' }}>
+              <Link to="/app/search" title="Search" style={{ textDecoration: 'none' }}>
+                <IconBtn title="Search"><Search size={15} /></IconBtn>
+              </Link>
+            </div>
+          )}
+
+          <div style={{ margin: '4px 10px', borderTop: '1px solid #E8E7E5', flexShrink: 0 }} />
+
+          {/* ── Main nav ─────────────────────────────────────────────── */}
+          <div style={{ padding: collapsed ? '2px 11px' : '2px 8px', flexShrink: 0 }}>
+            <NavItem to="/app"                  icon={LayoutDashboard} label="Home"           exact />
+            <NavItem to="/app/recall"           icon={Brain}           label="Recall"         />
+            <NavItem to="/app/decisions"        icon={Network}         label="Memory Graph"   badge={8} />
+            <NavItem to="/app/onboarding-packs" icon={Users}           label="Team Briefings" />
+          </div>
+
+          {/* ── Sources section ──────────────────────────────────────── */}
+          <div style={{ padding: collapsed ? '0 11px' : '0 8px', flexShrink: 0 }}>
+            <SectionLabel label="Sources" />
+            <SourceItem name="Slack"  logo={<SlackLogo size={12} />}  connected={true}  />
+            <SourceItem name="GitHub" logo={<GitHubLogo size={12} />} connected={true}  />
+            <SourceItem name="Notion" logo={<NotionLogo size={12} />} connected={false} />
+            <SourceItem name="Linear" logo={<LinearLogo size={12} />} connected={false} />
+            {!collapsed && (
+              <Link to="/app/settings/sources" style={{ textDecoration: 'none' }}>
+                <div
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '5px 9px', borderRadius: 7, cursor: 'pointer',
+                    fontSize: 13, color: '#aaa', transition: 'background 80ms', marginBottom: 1,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.color = '#555' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#aaa' }}
+                >
+                  <Plus size={13} style={{ color: '#bbb' }} /> Add source
+                </div>
+              </Link>
+            )}
+          </div>
+
+          {/* Spacer pushes bottom bar down */}
+          <div style={{ flex: 1 }} />
+
+          {/* ── Bottom bar ───────────────────────────────────────────── */}
+          <div style={{
+            padding: collapsed ? '6px 11px 10px' : '6px 8px 10px',
+            borderTop: '1px solid #E8E7E5', flexShrink: 0,
+            display: 'flex', flexDirection: 'column', gap: 1,
+          }}>
+            {/* Trash */}
+            {collapsed ? (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
+                <IconBtn title="Trash"><Trash2 size={15} /></IconBtn>
+              </div>
+            ) : (
+              <button style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '5px 9px',
+                borderRadius: 7, border: 'none', background: 'transparent',
+                fontSize: 13, color: '#3a3a3a', cursor: 'pointer', textAlign: 'left',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.05)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              >
+                <Trash2 size={14} style={{ color: '#6a6a6a', flexShrink: 0 }} /> Trash
+              </button>
+            )}
+
+            {/* Collapse toggle + user */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <UserMenu />
+              </div>
+              {!collapsed && (
+                <button
+                  onClick={() => setCollapsed(true)}
+                  title="Collapse sidebar"
+                  style={{
+                    width: 24, height: 24, borderRadius: 6, border: 'none',
+                    background: 'transparent', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#bbb', flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#555' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#bbb' }}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Expand button (collapsed mode only) */}
+            {collapsed && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
+                <button
+                  onClick={() => setCollapsed(false)}
+                  title="Expand sidebar"
+                  style={{
+                    width: 30, height: 24, borderRadius: 6, border: 'none',
+                    background: 'transparent', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#bbb',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#555' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#bbb' }}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* ── Main content ──────────────────────────────────────────────── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Topbar />
+          <main style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
+            {!isSettings && <Outlet />}
+          </main>
+        </div>
+
+        {/* ── Settings modal overlay ────────────────────────────────────── */}
+        {isSettings && (
+          <>
+            <div
+              onClick={() => navigate('/app')}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 100,
+                background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(2px)',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{
+              position: 'fixed', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 101,
+              width: 'min(92vw, 980px)', height: 'min(88vh, 720px)',
+              background: 'white', borderRadius: 14,
+              display: 'flex', overflow: 'hidden',
+              boxShadow: '0 28px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)',
+            }}>
+              <Outlet />
+            </div>
+          </>
+        )}
+      </div>
+    </SidebarCtx.Provider>
   )
 }
