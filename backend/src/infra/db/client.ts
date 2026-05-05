@@ -3,18 +3,18 @@ import postgres from 'postgres'
 import { env } from '@/config/env.js'
 import * as schema from './schema/index.js'
 
-const connectionString =
-  env.NODE_ENV === 'production' ? env.DATABASE_URL_POOLED : env.DATABASE_URL
+// Use the pooled connection in all environments.
+// The direct connection (port 5432) can fail from some networks on Supabase free tier.
+// The pooler (port 6543) is more reliable and handles connection limits correctly.
+const connectionString = env.DATABASE_URL_POOLED
 
 const client = postgres(connectionString, {
-  max:             env.NODE_ENV === 'production' ? 10 : 3,
-  idle_timeout:    20,
-  connect_timeout: 10,
-  max_lifetime:    60 * 30,   // recycle connections every 30 min
-  // Protect against runaway queries. WHY Engine at p99 is ~5s;
-  // 15s gives 3x headroom and kills genuinely hung queries.
+  max:             env.NODE_ENV === 'production' ? 10 : 5,
+  idle_timeout:    30,
+  connect_timeout: 15,
+  max_lifetime:    60 * 30,
   connection: {
-    statement_timeout: 15000,  // milliseconds
+    statement_timeout: 15000,
   },
 })
 
