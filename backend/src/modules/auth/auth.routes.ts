@@ -22,6 +22,8 @@ import {
   resetPassword,
   listSessions,
   revokeSession,
+  verifyEmail,
+  resendVerificationEmail,
 } from './auth.service.js'
 import { authMiddleware } from '@/api/middleware/auth.middleware.js'
 import { writeAudit } from '@/modules/audit/audit.service.js'
@@ -253,6 +255,41 @@ export default async function authRoutes(app: FastifyInstance) {
     const { sub, tid } = req.user as { sub: string; tid: string }
     const sessions     = await listSessions(sub, tid)
     return reply.send({ data: sessions })
+  })
+
+  // ── GET /api/v1/auth/verify-email ───────────────────────────────────────
+  // Public — called when user clicks the verification link in their email
+  app.get('/verify-email', {
+    config: { rateLimit: { max: 20, timeWindow: '15 minutes' } },
+    schema: {
+      tags: ['Auth'],
+      summary: 'Verify email address using token from verification email',
+      querystring: {
+        type: 'object',
+        properties: { token: { type: 'string' } },
+        required: ['token'],
+      },
+    },
+  }, async (req, reply) => {
+    const { token } = req.query as { token: string }
+    await verifyEmail(token)
+    // Redirect to app with success indicator
+    return reply.redirect(`${req.headers.origin ?? 'http://localhost:3000'}/app?verified=1`)
+  })
+
+  // ── POST /api/v1/auth/resend-verification ────────────────────────────────
+  app.post('/resend-verification', {
+    config: { rateLimit: { max: 3, timeWindow: '15 minutes' } },
+    schema: {
+      tags: ['Auth'],
+      summary: 'Resend email verification link',
+      security: [{ bearerAuth: [] }],
+    },
+    preHandler: [authMiddleware],
+  }, async (req, reply) => {
+    const { sub, tid } = req.user as { sub: string; tid: string }
+    await resendVerificationEmail(sub, tid)
+    return reply.status(204).send()
   })
 
   // ── DELETE /api/v1/auth/sessions/:id ─────────────────────────────────────

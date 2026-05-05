@@ -3,8 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 
 import NotFound       from '@/pages/NotFound'
-import Login          from '@/pages/auth/Login'
-import Signup         from '@/pages/auth/Signup'
+import Login           from '@/pages/auth/Login'
+import Signup          from '@/pages/auth/Signup'
+import ForgotPassword  from '@/pages/auth/ForgotPassword'
+import ResetPassword   from '@/pages/auth/ResetPassword'
+import AcceptInvite    from '@/pages/auth/AcceptInvite'
 import Onboarding     from '@/pages/onboarding/Onboarding'
 import AppShell       from '@/components/layout/AppShell'
 import Dashboard      from '@/pages/app/Dashboard'
@@ -36,8 +39,11 @@ export default function App() {
         <Routes>
           {/* / redirects straight to login */}
           <Route path="/"       element={<Navigate to="/login" replace />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login"  element={<Login />} />
+          <Route path="/signup"          element={<Signup />} />
+          <Route path="/login"           element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
+          <Route path="/accept-invite"   element={<AcceptInvite />} />
 
           <Route path="/onboarding" element={
             <ProtectedRoute><Onboarding /></ProtectedRoute>

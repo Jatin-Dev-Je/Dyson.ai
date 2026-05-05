@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+﻿import { createHmac, timingSafeEqual } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { createId } from '@paralleldrive/cuid2'
 import type { FastifyInstance } from 'fastify'
@@ -15,8 +15,9 @@ import {
   listActiveRefreshTokens,
   acceptInvitationAndCreateUser,
   updateUserPassword,
+  markEmailVerified,
 } from './auth.repository.js'
-import { sendPasswordResetEmail } from '@/infra/email.js'
+import { sendPasswordResetEmail, sendVerificationEmail } from '@/infra/email.js'
 import { findInvitationByToken } from '@/modules/users/users.repository.js'
 import { env } from '@/config/env.js'
 import { DysonError } from '@/shared/errors.js'
@@ -27,18 +28,18 @@ const BCRYPT_ROUNDS      = 12
 const ACCESS_TOKEN_TTL   = 15 * 60        // 15 minutes in seconds
 const REFRESH_TOKEN_TTL  = 30 * 24 * 3600 // 30 days in seconds
 
-// ─── Password utilities ───────────────────────────────────────────────────
+// â”€â”€â”€ Password utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, BCRYPT_ROUNDS)
 }
 
-// Timing-safe comparison — prevents timing attacks
+// Timing-safe comparison â€” prevents timing attacks
 export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plain, hash)
 }
 
-// ─── Token utilities ──────────────────────────────────────────────────────
+// â”€â”€â”€ Token utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function issueAccessToken(app: FastifyInstance, payload: Omit<JwtPayload, 'type'>): string {
   return app.jwt.sign(
@@ -47,7 +48,7 @@ function issueAccessToken(app: FastifyInstance, payload: Omit<JwtPayload, 'type'
   )
 }
 
-// HMAC-SHA256 of the raw token — deterministic, so we can look it up in the DB
+// HMAC-SHA256 of the raw token â€” deterministic, so we can look it up in the DB
 // with a simple equality query. bcrypt is intentionally NOT used here because
 // bcrypt is not deterministic: two hashes of the same input differ, making
 // indexed DB lookup impossible without scanning every row.
@@ -91,7 +92,7 @@ async function buildTokenPair(
   return { accessToken, refreshToken, expiresIn: ACCESS_TOKEN_TTL }
 }
 
-// ─── Auth operations ──────────────────────────────────────────────────────
+// â”€â”€â”€ Auth operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function signup(
   app: FastifyInstance,
@@ -115,15 +116,25 @@ export async function signup(
 
   const tokens = await buildTokenPair(app, user, meta)
 
+  // Send verification email non-blocking â€” signup still succeeds if email fails
+  const verificationToken = issueEmailVerificationToken(user.id, user.email)
+  void sendVerificationEmail({
+    to:    user.email,
+    name:  user.name,
+    token: verificationToken,
+    appUrl: env.APP_URL,
+  }).catch(err => console.error('[auth] Failed to send verification email:', err))
+
   return {
     tokens,
     user: {
-      id:        user.id,
-      tenantId:  tenant.id,
-      email:     user.email,
-      name:      user.name,
-      role:      user.role,
-      avatarUrl: user.avatarUrl ?? null,
+      id:              user.id,
+      tenantId:        tenant.id,
+      email:           user.email,
+      name:            user.name,
+      role:            user.role,
+      avatarUrl:       user.avatarUrl ?? null,
+      emailVerified:   false,
     },
   }
 }
@@ -135,7 +146,7 @@ export async function login(
 ): Promise<{ tokens: TokenPair; user: AuthUser }> {
   const user = await findUserByEmailGlobal(input.email)
 
-  // Constant-time path even when user doesn't exist — prevents user enumeration via timing
+  // Constant-time path even when user doesn't exist â€” prevents user enumeration via timing
   const dummyHash = '$2b$12$invalidhashfortimingneutrality000000000000000000000'
   const isValid   = user
     ? await verifyPassword(input.password, user.passwordHash)
@@ -162,6 +173,7 @@ export async function login(
       name:      user.name,
       role:      user.role,
       avatarUrl: user.avatarUrl ?? null,
+      emailVerified: user.emailVerifiedAt !== null && user.emailVerifiedAt !== undefined,
     },
   }
 }
@@ -205,7 +217,8 @@ export async function getMe(userId: string, tenantId: string): Promise<AuthUser>
     name:      user.name,
     role:      user.role,
     avatarUrl: user.avatarUrl ?? null,
-  }
+      emailVerified: user.emailVerifiedAt !== null && user.emailVerifiedAt !== undefined,
+    }
 }
 
 export async function getInviteInfo(token: string) {
@@ -267,6 +280,7 @@ export async function acceptInvite(
       name:      user.name,
       role:      user.role,
       avatarUrl: user.avatarUrl ?? null,
+      emailVerified: user.emailVerifiedAt !== null && user.emailVerifiedAt !== undefined,
     },
   }
 }
@@ -289,15 +303,69 @@ export async function changePassword(
   const newHash = await hashPassword(input.newPassword)
   await updateUserPassword(userId, tenantId, newHash)
 
-  // Revoke all existing refresh tokens — force re-login on all devices
+  // Revoke all existing refresh tokens â€” force re-login on all devices
   await revokeAllUserTokens(userId)
 }
 
-// ─── Password reset ───────────────────────────────────────────────────────
+// â”€â”€â”€ Email verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// Stateless signed token: base64url(userId:email:expiresAt:HMAC)
+// Includes email in payload so changing email invalidates old tokens.
+function issueEmailVerificationToken(userId: string, email: string): string {
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+  const payload   = `${userId}:${email}:${expiresAt}`
+  const sig       = createHmac('sha256', env.JWT_SECRET + 'email-verify').update(payload).digest('hex')
+  return Buffer.from(`${payload}:${sig}`).toString('base64url')
+}
+
+function verifyEmailVerificationToken(token: string): { userId: string; email: string } | null {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString()
+    const lastColon = decoded.lastIndexOf(':')
+    const payload   = decoded.slice(0, lastColon)
+    const sig       = decoded.slice(lastColon + 1)
+    const parts     = payload.split(':')
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null
+    const [userId, email, expiresAtStr] = parts as [string, string, string]
+    const expected = createHmac('sha256', env.JWT_SECRET + 'email-verify').update(payload).digest('hex')
+    const sigBuf   = Buffer.from(sig,      'hex')
+    const expBuf   = Buffer.from(expected, 'hex')
+    if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) return null
+    if (Date.now() > parseInt(expiresAtStr, 10)) return null
+    return { userId, email }
+  } catch {
+    return null
+  }
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  const payload = verifyEmailVerificationToken(token)
+  if (!payload) {
+    throw new DysonError('INVALID_TOKEN', 'Email verification link is invalid or expired', 400)
+  }
+  const user = await findUserByEmailGlobal(payload.email)
+  if (!user || user.id !== payload.userId) {
+    throw new DysonError('INVALID_TOKEN', 'Email verification link is invalid or expired', 400)
+  }
+  if (user.emailVerifiedAt) return // Already verified â€” idempotent
+  await markEmailVerified(user.id)
+}
+
+export async function resendVerificationEmail(userId: string, tenantId: string): Promise<void> {
+  const user = await findUserById(userId, tenantId)
+  if (!user) throw new DysonError('NOT_FOUND', 'User not found', 404)
+  if (user.emailVerifiedAt) {
+    throw new DysonError('ALREADY_VERIFIED', 'Email is already verified', 409)
+  }
+  const token = issueEmailVerificationToken(user.id, user.email)
+  await sendVerificationEmail({ to: user.email, name: user.name, token, appUrl: env.APP_URL })
+}
+
+// â”€â”€â”€ Password reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Stateless reset token: base64url( userId:tenantId:expiresAt:HMAC )
 // HMAC secret includes current passwordHash so the token auto-invalidates
-// once the password is changed — no extra DB table required.
+// once the password is changed â€” no extra DB table required.
 
 function issuePasswordResetToken(userId: string, tenantId: string, passwordHash: string): string {
   const expiresAt = Date.now() + 30 * 60 * 1000 // 30 minutes
@@ -335,12 +403,12 @@ function verifyPasswordResetToken(
 export async function forgotPassword(email: string, appUrl: string): Promise<void> {
   const user = await findUserByEmailGlobal(email)
 
-  // Always return success — don't leak whether the email exists
+  // Always return success â€” don't leak whether the email exists
   if (!user) return
 
   const resetToken = issuePasswordResetToken(user.id, user.tenantId, user.passwordHash)
 
-  // Non-blocking — fire and forget; don't delay the HTTP response
+  // Non-blocking â€” fire and forget; don't delay the HTTP response
   void sendPasswordResetEmail({
     to:         user.email,
     name:       user.name,
@@ -353,7 +421,7 @@ export async function forgotPassword(email: string, appUrl: string): Promise<voi
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
   // We need the user's current passwordHash to verify the token,
-  // but we don't know who the user is yet — so we decode the payload first
+  // but we don't know who the user is yet â€” so we decode the payload first
   // (without verifying the signature) to get the userId, then load the user,
   // then verify the signature with the real passwordHash.
   let userId: string
@@ -389,7 +457,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await revokeAllUserTokens(userId)
 }
 
-// ─── Active sessions ──────────────────────────────────────────────────────
+// â”€â”€â”€ Active sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function listSessions(userId: string, tenantId: string) {
   return listActiveRefreshTokens(userId, tenantId)
@@ -404,3 +472,4 @@ export async function revokeSession(sessionId: string, userId: string, tenantId:
   }
   await revokeRefreshToken(sessionId)
 }
+

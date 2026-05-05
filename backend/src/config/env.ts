@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { z } from 'zod'
 
 // ─── Schema ────────────────────────────────────────────────────────────────
@@ -59,6 +60,11 @@ const EnvSchema = z.object({
 
   // ── Swagger ───────────────────────────────────────────────────────────────
   SWAGGER_ENABLED: z.string().transform(v => v === 'true').default('true'),
+
+  // ── Job secret — protects the /jobs endpoints from unauthorized calls ───────
+  // In production use a strong random value separate from JWT_SECRET.
+  // In dev this defaults to a placeholder that's only reachable locally.
+  JOB_SECRET: z.string().min(16).default('dev-job-secret-local-only-not-for-prod'),
 
   // ── Email — Resend (optional in dev, required in prod for invites + password reset) ──
   RESEND_API_KEY:    z.string().optional(),

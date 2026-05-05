@@ -14,10 +14,11 @@ export type TokenPair = {
 }
 
 export type AuthUser = {
-  id:        string
-  tenantId:  string
-  email:     string
-  name:      string
-  role:      'admin' | 'member' | 'viewer'
-  avatarUrl: string | null
+  id:            string
+  tenantId:      string
+  email:         string
+  name:          string
+  role:          'admin' | 'member' | 'viewer'
+  avatarUrl:     string | null
+  emailVerified: boolean
 }

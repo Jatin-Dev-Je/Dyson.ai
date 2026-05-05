@@ -56,14 +56,15 @@ export async function findUserByEmail(email: string, tenantId: string) {
 export async function findUserByEmailGlobal(email: string) {
   const [row] = await db
     .select({
-      id:           users.id,
-      tenantId:     users.tenantId,
-      email:        users.email,
-      name:         users.name,
-      passwordHash: users.passwordHash,
-      role:         users.role,
-      avatarUrl:    users.avatarUrl,
-      isActive:     users.isActive,
+      id:              users.id,
+      tenantId:        users.tenantId,
+      email:           users.email,
+      name:            users.name,
+      passwordHash:    users.passwordHash,
+      role:            users.role,
+      avatarUrl:       users.avatarUrl,
+      isActive:        users.isActive,
+      emailVerifiedAt: users.emailVerifiedAt,
     })
     .from(users)
     .where(and(eq(users.email, email), eq(users.isActive, true)))
@@ -79,6 +80,13 @@ export async function findUserById(id: string, tenantId: string) {
     .where(and(eq(users.id, id), eq(users.tenantId, tenantId), eq(users.isActive, true)))
     .limit(1)
   return row ?? null
+}
+
+export async function markEmailVerified(userId: string) {
+  await db
+    .update(users)
+    .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+    .where(eq(users.id, userId))
 }
 
 export async function updateUserLastSeen(userId: string) {

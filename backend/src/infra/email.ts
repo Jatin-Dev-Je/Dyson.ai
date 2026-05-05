@@ -106,3 +106,34 @@ export async function sendPasswordResetEmail(opts: {
     text: `Reset your Dyson password: ${link}\n\nThis link expires in 30 minutes. If you didn't request this, ignore this email.`,
   })
 }
+
+export async function sendVerificationEmail(opts: {
+  to:     string
+  name:   string
+  token:  string
+  appUrl: string
+}): Promise<void> {
+  const link = `${opts.appUrl}/verify-email?token=${opts.token}`
+
+  await sendEmail({
+    to:      opts.to,
+    subject: 'Verify your Dyson email address',
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:8px;">Verify your email</h2>
+        <p style="color:#6b6b6b;font-size:14px;line-height:1.6;margin-bottom:24px;">
+          Hi ${opts.name}, click below to verify your email address and activate your Dyson account.
+          This link expires in 24 hours.
+        </p>
+        <a href="${link}"
+           style="display:inline-block;background:#5B5BD6;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">
+          Verify email →
+        </a>
+        <p style="color:#9b9b9b;font-size:12px;margin-top:24px;">
+          If you didn't create a Dyson account, you can safely ignore this email.
+        </p>
+      </div>
+    `,
+    text: `Verify your Dyson email: ${link}\n\nThis link expires in 24 hours.`,
+  })
+}

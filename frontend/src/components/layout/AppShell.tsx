@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Brain, Network, Users, Search,
-  Settings, ChevronDown, LogOut, User, CreditCard,
-  Plus, Bell, Key,
+  Brain, Network, Users, Search, Settings, ChevronDown,
+  LogOut, User, CreditCard, Plus, Bell, Key, Trash2,
+  ChevronRight, Hash, GitBranch, MessageSquare, Plug,
+  FileText, Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { authApi, tokens } from '@/lib/api'
@@ -19,8 +20,12 @@ function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => voi
   }, [ref, cb])
 }
 
-function NavItem({ to, icon: Icon, label, badge, exact = false }: {
-  to: string; icon: React.ElementType; label: string; badge?: number; exact?: boolean
+// ─── Nav item — Notion style ───────────────────────────────────────────────
+function NavItem({
+  to, icon: Icon, label, badge, exact = false, indent = 0,
+}: {
+  to: string; icon?: React.ElementType | undefined; label: string
+  badge?: number; exact?: boolean; indent?: number
 }) {
   const location = useLocation()
   const active = exact
@@ -29,17 +34,22 @@ function NavItem({ to, icon: Icon, label, badge, exact = false }: {
 
   return (
     <NavLink to={to} end={exact}>
-      <div className={cn(
-        'flex items-center gap-2 px-2.5 py-[6px] rounded-md text-[13px] cursor-pointer select-none transition-colors duration-100',
-        active ? 'bg-primary-light text-primary font-medium' : 'text-ink-2 hover:bg-hover hover:text-ink-1'
-      )}>
-        <Icon className={cn('w-[15px] h-[15px] flex-shrink-0', active ? 'text-primary' : 'text-ink-3')} />
-        <span className="flex-1 truncate">{label}</span>
+      <div
+        style={{ paddingLeft: `${8 + indent * 12}px` }}
+        className={cn(
+          'flex items-center gap-1.5 pr-2 py-[5px] rounded-md text-[13.5px] cursor-pointer select-none',
+          'transition-colors duration-75 group',
+          active
+            ? 'bg-[rgba(0,0,0,0.06)] text-[#1a1a1a] font-medium'
+            : 'text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a]'
+        )}
+      >
+        {Icon && (
+          <Icon className={cn('w-[15px] h-[15px] flex-shrink-0', active ? 'text-[#1a1a1a]' : 'text-[#9b9b9b]')} />
+        )}
+        <span className="flex-1 truncate leading-snug">{label}</span>
         {badge !== undefined && badge > 0 && (
-          <span className={cn(
-            'text-[10px] font-medium px-1.5 py-0.5 rounded tabular-nums',
-            active ? 'bg-primary/15 text-primary' : 'bg-line text-ink-3'
-          )}>
+          <span className="text-[10px] font-medium text-[#9b9b9b] bg-[rgba(0,0,0,0.06)] px-1.5 py-0.5 rounded tabular-nums">
             {badge}
           </span>
         )}
@@ -48,33 +58,94 @@ function NavItem({ to, icon: Icon, label, badge, exact = false }: {
   )
 }
 
-function SidebarLabel({ children }: { children: React.ReactNode }) {
+// ─── Collapsible section ───────────────────────────────────────────────────
+function SidebarSection({
+  label, children, defaultOpen = true,
+}: {
+  label: string; children: React.ReactNode; defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <p className="px-2.5 pt-3 pb-1 text-[10px] font-semibold text-ink-4 uppercase tracking-[0.08em]">
-      {children}
-    </p>
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-1 px-2 py-[3px] rounded-md text-[11px] font-medium text-[#a0a0a0] hover:text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.03)] transition-colors select-none group"
+      >
+        <ChevronRight className={cn('w-3 h-3 transition-transform duration-150 flex-shrink-0', open && 'rotate-90')} />
+        <span className="tracking-[0.04em] uppercase">{label}</span>
+      </button>
+      {open && <div className="mt-0.5">{children}</div>}
+    </div>
   )
 }
 
-const sourceConfig = {
-  Slack:  { dot: 'bg-[#E01E5A]', active: true  },
-  GitHub: { dot: 'bg-[#656D76]', active: true  },
-  Notion: { dot: 'bg-[#37352F]', active: false },
-} as const
-
-function SourceRow({ name }: { name: keyof typeof sourceConfig }) {
-  const { dot, active } = sourceConfig[name]
+// ─── Source item ───────────────────────────────────────────────────────────
+function SourceItem({ name, dot, connected }: { name: string; dot: string; connected: boolean }) {
   return (
     <Link to="/app/settings/sources">
-      <div className="flex items-center gap-2 px-2.5 py-[6px] rounded-md hover:bg-hover transition-colors group cursor-pointer">
-        <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dot, !active && 'opacity-30')} />
-        <span className="text-[13px] text-ink-3 group-hover:text-ink-2 flex-1 transition-colors">{name}</span>
-        {!active && <span className="text-[10px] text-ink-4">offline</span>}
+      <div className="flex items-center gap-1.5 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
+        <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dot, !connected && 'opacity-30')} />
+        <span className={cn('flex-1 text-[13.5px] truncate', connected ? 'text-[#6b6b6b]' : 'text-[#b0b0b0]')}>
+          {name}
+        </span>
+        {!connected && (
+          <span className="text-[10px] text-[#c0c0c0] opacity-0 group-hover:opacity-100 transition-opacity">
+            Connect
+          </span>
+        )}
       </div>
     </Link>
   )
 }
 
+// ─── Workspace switcher ────────────────────────────────────────────────────
+function WorkspaceSwitcher() {
+  const [open, setOpen] = useState(false)
+  const ref             = useRef<HTMLDivElement>(null)
+  useOutsideClick(ref, () => setOpen(false))
+
+  const user    = authApi.getUser()
+  const name    = user?.name ?? 'Workspace'
+  const initial = name[0]?.toUpperCase() ?? 'W'
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group"
+      >
+        <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+          <span className="text-[11px] font-bold text-white">{initial}</span>
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-[13.5px] font-semibold text-[#1a1a1a] leading-none truncate">Dyson</p>
+        </div>
+        <ChevronDown className={cn('w-3.5 h-3.5 text-[#b0b0b0] flex-shrink-0 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-[#E8E7E5] rounded-xl shadow-lg py-1.5 animate-fade-in">
+          <div className="px-3 py-2 border-b border-[#F0EFED] mb-1">
+            <p className="text-[11px] text-[#9b9b9b] uppercase tracking-[0.05em] font-medium mb-1">{user?.email}</p>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                <span className="text-[10px] font-bold text-white">{initial}</span>
+              </div>
+              <span className="text-[13px] font-medium text-[#1a1a1a]">Dyson</span>
+              <span className="ml-auto text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">Free</span>
+            </div>
+          </div>
+          <button className="w-full flex items-center gap-2 px-3 py-[6px] text-[13px] text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] transition-colors text-left">
+            <Plus className="w-3.5 h-3.5" />
+            Create or join a workspace
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── User / settings button ────────────────────────────────────────────────
 function UserMenu() {
   const [open, setOpen] = useState(false)
   const ref             = useRef<HTMLDivElement>(null)
@@ -96,40 +167,38 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-hover transition-colors"
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors"
       >
-        <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-primary">
+        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white shadow-sm">
           {initials || 'U'}
         </div>
-        <div className="flex-1 text-left min-w-0">
-          <p className="text-[12.5px] font-medium text-ink-1 leading-none truncate">{name}</p>
-        </div>
-        <ChevronDown className={cn('w-3.5 h-3.5 text-ink-4 transition-transform', open && 'rotate-180')} />
+        <p className="flex-1 text-left text-[13.5px] text-[#1a1a1a] font-medium truncate leading-none">{name}</p>
+        <ChevronDown className={cn('w-3.5 h-3.5 text-[#b0b0b0] flex-shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-surface border border-line rounded-lg shadow-md py-1 animate-fade-in">
-          <div className="px-3 py-2 border-b border-line mb-1">
-            <p className="text-[12px] font-semibold text-ink-1">{name}</p>
-            {email && <p className="text-[11px] text-ink-3 truncate mt-0.5">{email}</p>}
+        <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-white border border-[#E8E7E5] rounded-xl shadow-lg py-1.5 animate-fade-in">
+          <div className="px-3 py-2 border-b border-[#F0EFED] mb-1">
+            <p className="text-[12px] font-semibold text-[#1a1a1a]">{name}</p>
+            {email && <p className="text-[11px] text-[#9b9b9b] truncate mt-0.5">{email}</p>}
           </div>
           {[
-            { icon: User,       label: 'Profile',  path: '/app/settings/profile' },
-            { icon: CreditCard, label: 'Billing',  path: '/app/settings/billing' },
-            { icon: Settings,   label: 'Settings', path: '/app/settings' },
+            { icon: User,       label: 'My profile',  path: '/app/settings/profile' },
+            { icon: Settings,   label: 'Settings',    path: '/app/settings' },
+            { icon: CreditCard, label: 'Plans & billing', path: '/app/settings/billing' },
           ].map(item => (
             <button key={item.label}
               onClick={() => { navigate(item.path); setOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-3 py-[6px] text-[13px] text-ink-2 hover:bg-hover hover:text-ink-1 transition-colors text-left">
-              <item.icon className="w-3.5 h-3.5 text-ink-3 flex-shrink-0" />
+              className="w-full flex items-center gap-2.5 px-3 py-[6px] text-[13px] text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a] transition-colors text-left">
+              <item.icon className="w-3.5 h-3.5 text-[#9b9b9b] flex-shrink-0" />
               {item.label}
             </button>
           ))}
-          <div className="border-t border-line mt-1 pt-1">
+          <div className="border-t border-[#F0EFED] mt-1 pt-1">
             <button onClick={handleSignOut}
-              className="w-full flex items-center gap-2.5 px-3 py-[6px] text-[13px] text-danger hover:bg-red-50 transition-colors text-left">
+              className="w-full flex items-center gap-2.5 px-3 py-[6px] text-[13px] text-[#e5484d] hover:bg-red-50 transition-colors text-left">
               <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
-              Sign out
+              Log out
             </button>
           </div>
         </div>
@@ -138,6 +207,7 @@ function UserMenu() {
   )
 }
 
+// ─── Topbar ────────────────────────────────────────────────────────────────
 function Topbar() {
   const location = useLocation()
   const crumbs: [string, string][] = [
@@ -149,24 +219,23 @@ function Topbar() {
   ]
   const current = crumbs.find(([k]) => location.pathname.startsWith(k))
   const title   = current?.[1] ?? 'Home'
-  const user    = authApi.getUser()
 
   return (
-    <header className="h-11 flex-shrink-0 flex items-center justify-between px-5 border-b border-line bg-surface/95 backdrop-blur-sm sticky top-0 z-10">
-      <div className="flex items-center gap-1 text-[12px]">
-        <span className="text-ink-3">{user?.name?.split(' ')[0] ?? 'Workspace'}</span>
-        <span className="text-ink-4 mx-0.5">/</span>
-        <span className="text-ink-1 font-medium">{title}</span>
+    <header className="h-11 flex-shrink-0 flex items-center justify-between px-4 border-b border-[#E8E7E5] bg-white/90 backdrop-blur-sm sticky top-0 z-10">
+      <div className="flex items-center gap-1 text-[12.5px]">
+        <span className="text-[#9b9b9b]">Dyson</span>
+        <span className="text-[#d0d0d0] mx-0.5">/</span>
+        <span className="text-[#1a1a1a] font-medium">{title}</span>
       </div>
 
       <div className="flex items-center gap-1">
         <Link to="/app/recall">
-          <button className="h-7 px-3 flex items-center gap-1.5 rounded-md bg-primary text-[12px] font-medium text-white hover:bg-primary-hover transition-colors shadow-sm">
+          <button className="h-7 px-3 flex items-center gap-1.5 rounded-md bg-primary text-[12px] font-medium text-white hover:bg-primary-hover transition-colors">
             <Brain className="w-3.5 h-3.5" />
             Recall
           </button>
         </Link>
-        <button className="w-7 h-7 flex items-center justify-center rounded-md text-ink-3 hover:bg-hover hover:text-ink-1 transition-colors ml-1">
+        <button className="w-7 h-7 flex items-center justify-center rounded-md text-[#9b9b9b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a] transition-colors">
           <Bell className="w-4 h-4" />
         </button>
       </div>
@@ -174,68 +243,90 @@ function Topbar() {
   )
 }
 
+// ─── Shell ─────────────────────────────────────────────────────────────────
 export default function AppShell() {
-  const user = authApi.getUser()
-
   return (
-    <div className="flex h-screen bg-canvas overflow-hidden">
+    <div className="flex h-screen bg-[#FAFAF8] overflow-hidden">
 
-      {/* Sidebar */}
-      <aside className="w-[220px] flex-shrink-0 flex flex-col bg-subtle border-r border-line select-none">
+      {/* ── Sidebar ────────────────────────────────────────────── */}
+      <aside className="w-[240px] flex-shrink-0 flex flex-col bg-[#F7F6F3] border-r border-[#E8E7E5] select-none overflow-hidden">
 
-        {/* Workspace header */}
-        <div className="px-3 pt-3 pb-2 flex-shrink-0">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-hover transition-colors cursor-default">
-            <DysonMark size={15} className="text-primary flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-ink-1 leading-none">Dyson</p>
-              <p className="text-[10.5px] text-ink-3 mt-0.5 truncate">{user?.email ?? 'workspace'}</p>
-            </div>
-          </div>
+        {/* Workspace */}
+        <div className="px-2 pt-3 pb-1 flex-shrink-0">
+          <WorkspaceSwitcher />
         </div>
 
-        <div className="mx-3 border-t border-line flex-shrink-0" />
+        {/* Quick actions */}
+        <div className="px-2 pb-1 flex-shrink-0 space-y-0.5">
+          <Link to="/app/search">
+            <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
+              <Search className="w-[15px] h-[15px] text-[#9b9b9b]" />
+              <span className="flex-1 text-[13.5px] text-[#6b6b6b] group-hover:text-[#1a1a1a] transition-colors">Search</span>
+              <kbd className="text-[10px] text-[#c0c0c0] font-mono hidden group-hover:block">⌘K</kbd>
+            </div>
+          </Link>
+          <Link to="/app/settings">
+            <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
+              <Settings className="w-[15px] h-[15px] text-[#9b9b9b]" />
+              <span className="text-[13.5px] text-[#6b6b6b] group-hover:text-[#1a1a1a] transition-colors">Settings & members</span>
+            </div>
+          </Link>
+        </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-2">
-          <div className="space-y-0.5">
-            <NavItem to="/app"                   icon={LayoutDashboard} label="Home"           exact />
-            <NavItem to="/app/recall"            icon={Brain}           label="Recall"         />
-            <NavItem to="/app/decisions"         icon={Network}         label="Memory Graph"   badge={8} />
-            <NavItem to="/app/onboarding-packs"  icon={Users}           label="Team Briefings" />
-            <NavItem to="/app/search"            icon={Search}          label="Search"         />
-          </div>
+        <div className="mx-3 my-1 border-t border-[#E8E7E5] flex-shrink-0" />
 
-          <SidebarLabel>Sources</SidebarLabel>
-          <div className="space-y-0.5">
-            <SourceRow name="Slack"  />
-            <SourceRow name="GitHub" />
-            <SourceRow name="Notion" />
+        {/* Main navigation */}
+        <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+
+          {/* Primary pages */}
+          <NavItem to="/app"                  icon={undefined}  label="🏠 Home"             exact />
+          <NavItem to="/app/recall"           icon={Brain}      label="Recall"               />
+          <NavItem to="/app/decisions"        icon={Network}    label="Memory Graph"         badge={8} />
+          <NavItem to="/app/onboarding-packs" icon={Users}      label="Team Briefings"       />
+
+          <div className="my-2" />
+
+          {/* Sources */}
+          <SidebarSection label="Sources">
+            <SourceItem name="Slack"  dot="bg-[#E01E5A]" connected={true}  />
+            <SourceItem name="GitHub" dot="bg-[#656D76]" connected={true}  />
+            <SourceItem name="Notion" dot="bg-[#37352F]" connected={false} />
+            <SourceItem name="Linear" dot="bg-[#5E6AD2]" connected={false} />
             <Link to="/app/settings/sources">
-              <div className="flex items-center gap-2 px-2.5 py-[6px] rounded-md hover:bg-hover transition-colors group cursor-pointer">
-                <Plus className="w-[15px] h-[15px] text-ink-4 group-hover:text-ink-3" />
-                <span className="text-[13px] text-ink-4 group-hover:text-ink-3 transition-colors">Add source</span>
+              <div className="flex items-center gap-1.5 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
+                <Plus className="w-[14px] h-[14px] text-[#c0c0c0] group-hover:text-[#9b9b9b]" />
+                <span className="text-[13.5px] text-[#b0b0b0] group-hover:text-[#6b6b6b] transition-colors">Add source</span>
               </div>
             </Link>
-          </div>
+          </SidebarSection>
 
-          <SidebarLabel>Workspace</SidebarLabel>
-          <div className="space-y-0.5">
-            <NavItem to="/app/settings/api-keys" icon={Key}      label="API Keys"  />
-            <NavItem to="/app/settings"          icon={Settings} label="Settings"  />
-          </div>
+          <div className="my-2" />
+
+          {/* Workspace */}
+          <SidebarSection label="Workspace" defaultOpen={false}>
+            <NavItem to="/app/settings/members"   icon={Users}    label="Members"    />
+            <NavItem to="/app/settings/api-keys"  icon={Key}      label="API Keys"   />
+            <NavItem to="/app/settings/audit-log" icon={FileText} label="Audit log"  />
+            <NavItem to="/app/settings/security"  icon={Shield}   label="Security"   />
+          </SidebarSection>
         </nav>
 
-        {/* User */}
-        <div className="px-2 pb-2 pt-1 border-t border-line flex-shrink-0">
+        {/* Bottom */}
+        <div className="px-2 py-2 border-t border-[#E8E7E5] space-y-0.5 flex-shrink-0">
+          <Link to="/app/settings">
+            <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
+              <Trash2 className="w-[15px] h-[15px] text-[#9b9b9b]" />
+              <span className="text-[13.5px] text-[#6b6b6b] group-hover:text-[#1a1a1a] transition-colors">Trash</span>
+            </div>
+          </Link>
           <UserMenu />
         </div>
       </aside>
 
-      {/* Content */}
+      {/* ── Main content ───────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-white">
           <Outlet />
         </main>
       </div>

@@ -4,7 +4,7 @@ import { eq, and, desc, gt } from 'drizzle-orm'
 
 export type AuditAction =
   | 'auth.signup' | 'auth.login' | 'auth.logout' | 'auth.refresh'
-  | 'auth.accept_invite' | 'auth.change_password'
+  | 'auth.accept_invite' | 'auth.change_password' | 'auth.email_verified' | 'auth.resend_verification'
   | 'connector.connected' | 'connector.disconnected' | 'connector.synced'
   | 'memory.recall' | 'memory.feedback' | 'memory.created' | 'memory.linked'
   | 'why.query' | 'why.feedback'  // legacy — kept for existing audit rows

@@ -6,11 +6,13 @@ import { handleBackfillSource }     from '@/jobs/backfill-source.job.js'
 import { DysonError }               from '@/shared/errors.js'
 import { env }                      from '@/config/env.js'
 
-// Jobs are called by Cloud Tasks using an internal shared secret
-// In production this should be a Cloud Tasks OIDC token instead
+// Jobs are called by Cloud Tasks. In production, Cloud Tasks sends an OIDC token
+// (recommended). As a simpler alternative we verify a shared JOB_SECRET header.
+// This is a dedicated secret — never the same as JWT_SECRET.
 function verifyJobSecret(request: { headers: Record<string, string | string[] | undefined> }) {
+  if (env.NODE_ENV !== 'production') return // unreachable from public internet in dev
   const secret = request.headers['x-dyson-job-secret']
-  if (env.NODE_ENV === 'production' && secret !== env.JWT_SECRET) {
+  if (secret !== env.JOB_SECRET) {
     throw new DysonError('FORBIDDEN', 'Invalid job secret', 403)
   }
 }
