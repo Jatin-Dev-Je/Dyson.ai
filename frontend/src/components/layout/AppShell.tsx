@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-do
 import {
   Brain, Network, Users, Search, Settings,
   ChevronDown, ChevronLeft, ChevronRight, LogOut,
-  Plus, Bell, LayoutDashboard, Key, Zap,
+  Plus, Bell, LayoutDashboard,
 } from 'lucide-react'
 import { authApi, tokens } from '@/lib/api'
 
@@ -620,22 +620,6 @@ export default function AppShell() {
                 </div>
               </Link>
             )}
-          </div>
-
-          {/* ── Agents ──────────────────────────────────────────────────── */}
-          <div style={{ padding: collapsed ? '0 10px' : '0 8px', flexShrink: 0 }}>
-            <SectionLabel label="Agents" />
-            <NavItem
-              to="/app/settings/api-keys"
-              icon={Key}
-              label="Agent API"
-            />
-            <NavItem
-              to="/app/settings/api-keys"
-              icon={Zap}
-              label="MCP Server"
-              statusBadge={{ text: 'Active', green: true }}
-            />
           </div>
 
           {/* Spacer */}
