@@ -4,7 +4,45 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { AuthLayout } from './AuthLayout'
 import { OAuthButton } from '@/components/shared/OAuthButton'
 import { authApi, ApiError } from '@/lib/api'
-import { cn } from '@/lib/utils'
+
+function AuthInput({ label, error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
+  const [focus, setFocus] = useState(false)
+  const [show,  setShow]  = useState(false)
+  const isPw = props.type === 'password'
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#525252', marginBottom: 6 }}>
+        {label}
+      </label>
+      <div style={{
+        display: 'flex', alignItems: 'center', height: 38, padding: '0 12px',
+        background: 'white', borderRadius: 8,
+        border: `1px solid ${error ? '#F87171' : focus ? 'rgba(91,91,214,0.45)' : '#E8E7E5'}`,
+        boxShadow: focus ? '0 0 0 3px rgba(91,91,214,0.10)' : error ? '0 0 0 3px rgba(220,38,38,0.08)' : 'none',
+        transition: 'all 120ms',
+      }}>
+        <input
+          {...props}
+          type={isPw ? (show ? 'text' : 'password') : props.type}
+          onFocus={() => setFocus(true)}
+          onBlur={() => setFocus(false)}
+          style={{
+            flex: 1, border: 'none', background: 'transparent', outline: 'none',
+            fontSize: 13.5, color: '#1a1a1a', minWidth: 0,
+          }}
+        />
+        {isPw && (
+          <button type="button" onClick={() => setShow(v => !v)} tabIndex={-1}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9b9b9b', padding: 0, display: 'flex' }}>
+            {show ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        )}
+      </div>
+      {error && <p style={{ fontSize: 11.5, color: '#DC2626', marginTop: 5, marginBottom: 0 }}>{error}</p>}
+    </div>
+  )
+}
 
 export default function Login() {
   const navigate = useNavigate()
@@ -13,7 +51,6 @@ export default function Login() {
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
   const [errors,   setErrors]   = useState({ email: '', password: '' })
@@ -46,108 +83,71 @@ export default function Login() {
 
   return (
     <AuthLayout>
-      <div className="px-8 pt-8 pb-7">
+      <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1a1a1a', margin: 0, marginBottom: 4 }}>
+        Welcome back
+      </h2>
+      <p style={{ fontSize: 12.5, color: '#9b9b9b', margin: 0, marginBottom: 20 }}>
+        Sign in to your workspace.
+      </p>
 
-        {/* Header */}
-        <div className="mb-7">
-          <h1 className="text-[22px] font-semibold text-ink-1 tracking-tight mb-1">Welcome back</h1>
-          <p className="text-[13.5px] text-ink-3">Sign in to your Dyson workspace</p>
-        </div>
-
-        {/* OAuth */}
-        <div className="space-y-2.5 mb-6">
-          <OAuthButton provider="google" />
-          <OAuthButton provider="github" />
-        </div>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px bg-line" />
-          <span className="text-[12px] text-ink-4 font-medium">or</span>
-          <div className="flex-1 h-px bg-line" />
-        </div>
-
-        {/* Error */}
-        {apiError && (
-          <div className="mb-5 flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-red-50 border border-red-200">
-            <div className="w-1.5 h-1.5 rounded-full bg-danger mt-1.5 flex-shrink-0" />
-            <p className="text-[12.5px] text-danger leading-relaxed">{apiError}</p>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-
-          {/* Email */}
-          <div>
-            <label className="block text-[12px] font-medium text-ink-2 mb-1.5">Email address</label>
-            <input
-              type="email" autoComplete="email" autoFocus
-              placeholder="you@company.com"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }}
-              className={cn(
-                'w-full h-10 px-3.5 rounded-lg border bg-white text-[13.5px] text-ink-1 placeholder:text-ink-4',
-                'outline-none transition-all',
-                errors.email
-                  ? 'border-danger/60 ring-2 ring-danger/10'
-                  : 'border-line hover:border-line-strong focus:border-primary/60 focus:ring-2 focus:ring-primary/10'
-              )}
-            />
-            {errors.email && <p className="text-[11.5px] text-danger mt-1.5">{errors.email}</p>}
-          </div>
-
-          {/* Password */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[12px] font-medium text-ink-2">Password</label>
-              <Link to="/forgot-password"
-                className="text-[12px] text-ink-3 hover:text-primary transition-colors">
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative">
-              <input
-                type={showPw ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="Your password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setErrors(v => ({ ...v, password: '' })) }}
-                className={cn(
-                  'w-full h-10 px-3.5 pr-11 rounded-lg border bg-white text-[13.5px] text-ink-1 placeholder:text-ink-4',
-                  'outline-none transition-all',
-                  errors.password
-                    ? 'border-danger/60 ring-2 ring-danger/10'
-                    : 'border-line hover:border-line-strong focus:border-primary/60 focus:ring-2 focus:ring-primary/10'
-                )}
-              />
-              <button type="button" onClick={() => setShowPw(v => !v)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-4 hover:text-ink-2 transition-colors">
-                {showPw ? <EyeOff className="w-[17px] h-[17px]" /> : <Eye className="w-[17px] h-[17px]" />}
-              </button>
-            </div>
-            {errors.password && <p className="text-[11.5px] text-danger mt-1.5">{errors.password}</p>}
-          </div>
-
-          {/* Submit */}
-          <button type="submit" disabled={loading}
-            className="w-full h-10 flex items-center justify-center gap-2 rounded-lg bg-primary text-[13.5px] font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
-            {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>
-              : 'Sign in'}
-          </button>
-        </form>
+      {/* OAuth buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+        <OAuthButton provider="google" />
+        <OAuthButton provider="github" />
       </div>
 
-      {/* Card footer */}
-      <div className="px-8 py-4 border-t border-line bg-[#FAFAF8] text-center">
-        <p className="text-[13px] text-ink-3">
-          No account yet?{' '}
-          <Link to="/signup" className="text-primary font-medium hover:text-primary-hover transition-colors">
-            Create one free
+      {/* Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 14px' }}>
+        <div style={{ flex: 1, height: 1, background: '#E8E7E5' }} />
+        <span style={{ fontSize: 10.5, color: '#b0b0b0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>or</span>
+        <div style={{ flex: 1, height: 1, background: '#E8E7E5' }} />
+      </div>
+
+      {/* Error */}
+      {apiError && (
+        <div style={{ marginBottom: 14, padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12.5, color: '#DC2626' }}>
+          {apiError}
+        </div>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthInput
+          label="Work email" type="email" autoComplete="email" autoFocus
+          placeholder="you@company.com"
+          value={email} error={errors.email}
+          onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }}
+        />
+        <AuthInput
+          label="Password" type="password" autoComplete="current-password"
+          placeholder="Your password"
+          value={password} error={errors.password}
+          onChange={e => { setPassword(e.target.value); setErrors(v => ({ ...v, password: '' })) }}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4, marginBottom: 16 }}>
+          <Link to="/forgot-password" style={{ fontSize: 11.5, color: '#5B5BD6', textDecoration: 'none' }}>
+            Forgot password?
           </Link>
-        </p>
-      </div>
+        </div>
+
+        <button type="submit" disabled={loading}
+          style={{
+            width: '100%', height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: loading ? '#7878e0' : '#5B5BD6', color: 'white',
+            border: 'none', borderRadius: 8, fontSize: 13.5, fontWeight: 500,
+            cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 120ms',
+          }}>
+          {loading ? <><Loader2 size={14} className="animate-spin" />Signing in…</> : 'Sign in'}
+        </button>
+      </form>
+
+      <p style={{ textAlign: 'center', fontSize: 12.5, color: '#9b9b9b', marginTop: 18, marginBottom: 0 }}>
+        New to Dyson?{' '}
+        <Link to="/signup" style={{ color: '#5B5BD6', textDecoration: 'none', fontWeight: 500 }}>
+          Create a workspace
+        </Link>
+      </p>
     </AuthLayout>
   )
 }
