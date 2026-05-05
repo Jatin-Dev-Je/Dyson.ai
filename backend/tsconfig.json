@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
+    /* ── Runtime target ─────────────────────────────────────────── */
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
+
+    /* ── Paths ──────────────────────────────────────────────────── */
     "outDir": "dist",
     "rootDir": "src",
     "baseUrl": ".",
@@ -11,26 +14,26 @@
       "@/*": ["src/*"]
     },
 
-    /* Strict */
+    /* ── Strict ─────────────────────────────────────────────────── */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
 
-    /* Modules */
+    /* ── Interop ─────────────────────────────────────────────────── */
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
+    "verbatimModuleSyntax": false,
 
-    /* Output */
-    "declaration": true,
-    "declarationMap": true,
+    /* ── Output ─────────────────────────────────────────────────── */
     "sourceMap": true,
     "removeComments": true,
 
-    /* Perf */
+    /* ── Perf ───────────────────────────────────────────────────── */
     "skipLibCheck": true,
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo"
