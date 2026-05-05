@@ -7,7 +7,79 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { authApi, tokens } from '@/lib/api'
-import { DysonMark } from '@/components/shared/DysonMark'
+
+// ─── Real brand logos ──────────────────────────────────────────────────────
+
+function SlackLogo({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 54 54" aria-hidden="true">
+      <path d="M19.712 28.14a3.856 3.856 0 0 1-3.853 3.853 3.856 3.856 0 0 1-3.853-3.853 3.856 3.856 0 0 1 3.853-3.853h3.853v3.853zM21.59 28.14a3.856 3.856 0 0 1 3.853-3.853 3.856 3.856 0 0 1 3.853 3.853v9.647a3.856 3.856 0 0 1-3.853 3.853 3.856 3.856 0 0 1-3.853-3.853V28.14z" fill="#E01E5A"/>
+      <path d="M25.443 19.712a3.856 3.856 0 0 1-3.853-3.853 3.856 3.856 0 0 1 3.853-3.853 3.856 3.856 0 0 1 3.853 3.853v3.853h-3.853zM25.443 21.59a3.856 3.856 0 0 1 3.853 3.853 3.856 3.856 0 0 1-3.853 3.853h-9.647a3.856 3.856 0 0 1-3.853-3.853 3.856 3.856 0 0 1 3.853-3.853h9.647z" fill="#36C5F0"/>
+      <path d="M34.288 25.443a3.856 3.856 0 0 1 3.853-3.853 3.856 3.856 0 0 1 3.853 3.853 3.856 3.856 0 0 1-3.853 3.853h-3.853v-3.853zM32.41 25.443a3.856 3.856 0 0 1-3.853 3.853 3.856 3.856 0 0 1-3.853-3.853v-9.647a3.856 3.856 0 0 1 3.853-3.853 3.856 3.856 0 0 1 3.853 3.853v9.647z" fill="#2EB67D"/>
+      <path d="M28.557 34.288a3.856 3.856 0 0 1 3.853 3.853 3.856 3.856 0 0 1-3.853 3.853 3.856 3.856 0 0 1-3.853-3.853v-3.853h3.853zM28.557 32.41a3.856 3.856 0 0 1-3.853-3.853 3.856 3.856 0 0 1 3.853-3.853h9.647a3.856 3.856 0 0 1 3.853 3.853 3.856 3.856 0 0 1-3.853 3.853H28.557z" fill="#ECB22E"/>
+    </svg>
+  )
+}
+
+function GitHubLogo({ size = 16, color = '#1a1a1a' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
+      <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12Z"/>
+    </svg>
+  )
+}
+
+function NotionLogo({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4.46 1.93 17.4.93c1.59-.13 2-.04 3 .68l4.13 2.91c.69.5.92.65.92 1.2v16.31c0 1.01-.36 1.61-1.64 1.7l-15.04.91c-.97.05-1.43-.09-1.94-.74L3.78 19.09c-.55-.74-.78-1.29-.78-1.94V3.59c0-.83.36-1.52 1.46-1.66z" fill="#fff" stroke="#e0dfdc" strokeWidth=".5"/>
+      <path d="M3.34 4.55v13.74c0 .69.36 1.01 1.16 1.01l16.49-1c.83-.05 1.01-.55 1.01-1.15V4.59c0-.6-.23-.92-.74-.87l-17.27 1c-.55.04-.65.32-.65.83Zm15.39 1.6c.09.42 0 .83-.42.88l-.79.16v11.6c-.69.37-1.33.6-1.85.6-.83 0-1.05-.27-1.66-1.04L9.06 11.2v6.86l1.65.37s0 .96-1.34 1.01l-3.69.21c-.11-.21 0-.74.36-.83l.97-.27V8.13l-1.34-.11c-.11-.42.13-1.01.78-1.06l3.97-.27 5.46 8.36V8.05l-1.39-.16c-.11-.51.27-.87.74-.92l3.51-.21Z" fill="#37352F"/>
+    </svg>
+  )
+}
+
+function LinearLogo({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id="linear-grad" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stopColor="#5E6AD2"/>
+          <stop offset="100%" stopColor="#3F4ABE"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="50" fill="url(#linear-grad)"/>
+      <path d="M16 53 47 84M16 36 64 84M22 24 76 78M37 18 82 63M52 16 84 48M70 19 81 30" stroke="#fff" strokeWidth="6" strokeLinecap="round" fill="none" opacity=".95"/>
+    </svg>
+  )
+}
+
+// Dyson mark — three connected nodes forming a causal triangle
+function DysonMark({ size = 20 }: { size?: number }) {
+  const r = Math.max(4, size * 0.22)
+  return (
+    <span style={{
+      width: size, height: size, borderRadius: r,
+      background: '#5B5BD6',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 120 120" aria-hidden="true">
+        <g stroke="white" strokeWidth="7" strokeLinecap="round" opacity="0.55">
+          <line x1="32" y1="40" x2="88" y2="40"/>
+          <line x1="32" y1="40" x2="60" y2="86"/>
+          <line x1="88" y1="40" x2="60" y2="86"/>
+        </g>
+        <g fill="white">
+          <circle cx="32" cy="40" r="11"/>
+          <circle cx="88" cy="40" r="11"/>
+          <circle cx="60" cy="86" r="11"/>
+        </g>
+      </svg>
+    </span>
+  )
+}
+
+// ─── Utilities ─────────────────────────────────────────────────────────────
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
   useEffect(() => {
@@ -19,7 +91,7 @@ function useOutsideClick(ref: React.RefObject<HTMLElement | null>, cb: () => voi
   }, [ref, cb])
 }
 
-// ─── Nav item ─────────────────────────────────────────────────────────────
+// ─── Nav item ──────────────────────────────────────────────────────────────
 function NavItem({ to, icon: Icon, label, badge, exact = false }: {
   to: string; icon: React.ElementType; label: string
   badge?: number; exact?: boolean
@@ -30,26 +102,33 @@ function NavItem({ to, icon: Icon, label, badge, exact = false }: {
     : location.pathname.startsWith(to)
 
   return (
-    <NavLink to={to} end={exact}>
-      <div className={cn(
-        'flex items-center gap-2 px-2 py-[5px] rounded-md text-[13.5px] cursor-pointer select-none transition-colors duration-75',
-        active
-          ? 'bg-[rgba(0,0,0,0.06)] text-[#1a1a1a] font-medium'
-          : 'text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a]'
-      )}>
-        <Icon className={cn('w-[15px] h-[15px] flex-shrink-0', active ? 'text-[#1a1a1a]' : 'text-[#9b9b9b]')} />
-        <span className="flex-1 truncate">{label}</span>
+    <NavLink to={to} end={exact} style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 7,
+        padding: '5px 8px', borderRadius: 6,
+        background: active ? 'rgba(0,0,0,0.06)' : 'transparent',
+        color: active ? '#1a1a1a' : '#6b6b6b',
+        fontSize: 13.5, fontWeight: active ? 500 : 400,
+        cursor: 'pointer', transition: 'background 80ms',
+        userSelect: 'none',
+      }}
+        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.04)' }}
+        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
+      >
+        <Icon size={15} style={{ color: active ? '#1a1a1a' : '#9b9b9b', flexShrink: 0 }} />
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
         {badge !== undefined && badge > 0 && (
-          <span className="text-[10px] font-medium text-[#9b9b9b] bg-[rgba(0,0,0,0.06)] px-1.5 py-0.5 rounded tabular-nums">
-            {badge}
-          </span>
+          <span style={{
+            fontSize: 10, fontWeight: 500, color: '#9b9b9b',
+            background: 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: 4,
+          }}>{badge}</span>
         )}
       </div>
     </NavLink>
   )
 }
 
-// ─── Collapsible section ───────────────────────────────────────────────────
+// ─── Section label ─────────────────────────────────────────────────────────
 function SidebarSection({ label, children, defaultOpen = true }: {
   label: string; children: React.ReactNode; defaultOpen?: boolean
 }) {
@@ -58,30 +137,61 @@ function SidebarSection({ label, children, defaultOpen = true }: {
     <div>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-1 px-2 py-[3px] rounded-md text-[11px] font-semibold text-[#a0a0a0] uppercase tracking-[0.05em] hover:text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.03)] transition-colors select-none"
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 4,
+          padding: '4px 8px', border: 'none', background: 'transparent',
+          color: '#a0a0a0', fontSize: 11, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '0.05em',
+          cursor: 'pointer', borderRadius: 6, userSelect: 'none',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.03)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
       >
-        <ChevronRight className={cn('w-3 h-3 transition-transform duration-150 flex-shrink-0', open && 'rotate-90')} />
+        <ChevronRight size={11} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms', color: '#b0b0b0', flexShrink: 0 }} />
         {label}
       </button>
-      {open && <div className="mt-0.5">{children}</div>}
+      {open && <div style={{ marginTop: 2 }}>{children}</div>}
     </div>
   )
 }
 
-// ─── Source item ───────────────────────────────────────────────────────────
-function SourceItem({ name, dotColor, connected }: { name: string; dotColor: string; connected: boolean }) {
+// ─── Source item with real brand logo ──────────────────────────────────────
+function SourceItem({ name, logo, connected }: {
+  name: string; logo: React.ReactNode; connected: boolean
+}) {
+  const [hov, setHov] = useState(false)
   return (
-    <Link to="/app/settings/sources">
-      <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
-        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor, opacity: connected ? 1 : 0.3 }} />
-        <span className={cn('flex-1 text-[13.5px] truncate', connected ? 'text-[#6b6b6b]' : 'text-[#b0b0b0]')}>
-          {name}
-        </span>
-        {!connected && (
-          <span className="text-[10px] text-[#9b9b9b] opacity-0 group-hover:opacity-100 transition-opacity">
-            Connect
-          </span>
-        )}
+    <Link to="/app/settings/sources" style={{ textDecoration: 'none' }}>
+      <div
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '5px 8px', borderRadius: 6,
+          background: hov ? 'rgba(0,0,0,0.04)' : 'transparent',
+          cursor: 'pointer', transition: 'background 80ms',
+        }}
+      >
+        {/* Brand logo in a small box */}
+        <div style={{
+          width: 18, height: 18, borderRadius: 4,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: connected ? 'white' : '#f0efed',
+          border: '1px solid #e8e7e5',
+          flexShrink: 0, opacity: connected ? 1 : 0.45,
+          overflow: 'hidden',
+        }}>
+          {logo}
+        </div>
+        <span style={{
+          flex: 1, fontSize: 13.5,
+          color: connected ? '#6b6b6b' : '#b0b0b0',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{name}</span>
+        {connected
+          ? <span style={{ width: 6, height: 6, borderRadius: 99, background: '#16A34A', flexShrink: 0 }} />
+          : hov && <span style={{ fontSize: 10, color: '#9b9b9b', flexShrink: 0 }}>Connect</span>
+        }
       </div>
     </Link>
   )
@@ -97,35 +207,50 @@ function WorkspaceSwitcher() {
   const initial = (user?.name ?? 'W')[0]?.toUpperCase() ?? 'W'
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors"
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '6px 8px', border: 'none', borderRadius: 6,
+          background: open ? 'rgba(0,0,0,0.04)' : 'transparent',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.04)' }}
+        onMouseLeave={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
       >
-        <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
-          <DysonMark size={13} className="text-white" />
-        </div>
-        <span className="flex-1 text-left text-[13.5px] font-semibold text-[#1a1a1a] truncate leading-none">Dyson</span>
-        <ChevronDown className={cn('w-3.5 h-3.5 text-[#b0b0b0] flex-shrink-0 transition-transform duration-150', open && 'rotate-180')} />
+        <DysonMark size={22} />
+        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: '#1a1a1a', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          Dyson
+        </span>
+        <ChevronDown size={13} style={{ color: '#b0b0b0', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms', flexShrink: 0 }} />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-[#E8E7E5] rounded-xl shadow-lg py-1.5 animate-fade-in">
-          <div className="px-3 py-2 border-b border-[#F0EFED] mb-1">
-            <p className="text-[10.5px] text-[#9b9b9b] uppercase tracking-[0.05em] font-medium mb-2">{user?.email}</p>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
-                <span className="text-[9px] font-bold text-white">{initial}</span>
-              </div>
-              <span className="text-[13px] font-medium text-[#1a1a1a]">Dyson</span>
-              <span className="ml-auto text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">Free</span>
+        <div style={{
+          position: 'absolute', top: '100%', left: 8, right: 8, marginTop: 4, zIndex: 50,
+          background: 'white', border: '1px solid #E8E7E5', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.10)', padding: 4,
+        }}>
+          <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F0EFED', marginBottom: 4 }}>
+            <p style={{ fontSize: 10.5, color: '#9b9b9b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500, margin: 0, marginBottom: 6 }}>{user?.email}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DysonMark size={20} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a1a' }}>Dyson</span>
+              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#5B5BD6', background: 'rgba(91,91,214,0.08)', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>Free</span>
             </div>
           </div>
           <button
-            className="w-full flex items-center gap-2 px-3 py-[6px] text-[13px] text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] transition-colors text-left"
             onClick={() => setOpen(false)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+              fontSize: 13, color: '#6b6b6b', border: 'none', background: 'transparent',
+              cursor: 'pointer', borderRadius: 6, textAlign: 'left',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
-            <Plus className="w-3.5 h-3.5" /> Create or join workspace
+            <Plus size={13} /> Create or join a workspace
           </button>
         </div>
       )}
@@ -152,42 +277,69 @@ function UserMenu() {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors"
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '5px 8px', border: 'none', borderRadius: 6,
+          background: open ? 'rgba(0,0,0,0.04)' : 'transparent',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.04)' }}
+        onMouseLeave={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
       >
-        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white">
-          {initials || 'U'}
-        </div>
-        <span className="flex-1 text-[13.5px] font-medium text-[#1a1a1a] truncate text-left leading-none">{name}</span>
-        <ChevronDown className={cn('w-3.5 h-3.5 text-[#b0b0b0] flex-shrink-0 transition-transform duration-150', open && 'rotate-180')} />
+        <div style={{
+          width: 22, height: 22, borderRadius: 99, flexShrink: 0,
+          background: 'linear-gradient(135deg, #5B5BD6, #8a8aff)',
+          color: 'white', fontSize: 10, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{initials || 'U'}</div>
+        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: '#1a1a1a', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+        <ChevronDown size={13} style={{ color: '#b0b0b0', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms', flexShrink: 0 }} />
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-white border border-[#E8E7E5] rounded-xl shadow-lg py-1.5 animate-fade-in">
-          <div className="px-3 py-2 border-b border-[#F0EFED] mb-1">
-            <p className="text-[12px] font-semibold text-[#1a1a1a]">{name}</p>
-            {email && <p className="text-[11px] text-[#9b9b9b] truncate mt-0.5">{email}</p>}
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 8, right: 8, marginBottom: 4, zIndex: 50,
+          background: 'white', border: '1px solid #E8E7E5', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.10)', padding: 4,
+        }}>
+          <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F0EFED', marginBottom: 4 }}>
+            <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{name}</p>
+            {email && <p style={{ fontSize: 11, color: '#9b9b9b', margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</p>}
           </div>
           {[
-            { icon: User,       label: 'My profile',      path: '/app/settings/profile'  },
-            { icon: Settings,   label: 'Settings',         path: '/app/settings'          },
-            { icon: CreditCard, label: 'Plans & billing',  path: '/app/settings/billing'  },
-            { icon: FileText,   label: 'Audit log',        path: '/app/settings/audit-log'},
+            { icon: User,       label: 'My profile',     path: '/app/settings/profile'   },
+            { icon: Settings,   label: 'Settings',        path: '/app/settings'           },
+            { icon: CreditCard, label: 'Plans & billing', path: '/app/settings/billing'   },
+            { icon: FileText,   label: 'Audit log',       path: '/app/settings/audit-log' },
           ].map(item => (
             <button key={item.label}
               onClick={() => { navigate(item.path); setOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-3 py-[6px] text-[13px] text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a] transition-colors text-left">
-              <item.icon className="w-3.5 h-3.5 text-[#9b9b9b] flex-shrink-0" />
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
+                fontSize: 13, color: '#6b6b6b', border: 'none', background: 'transparent',
+                cursor: 'pointer', borderRadius: 6, textAlign: 'left',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1'; (e.currentTarget as HTMLButtonElement).style.color = '#1a1a1a' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b6b6b' }}
+            >
+              <item.icon size={13} style={{ color: '#9b9b9b', flexShrink: 0 }} />
               {item.label}
             </button>
           ))}
-          <div className="border-t border-[#F0EFED] mt-1 pt-1">
+          <div style={{ borderTop: '1px solid #F0EFED', marginTop: 4, paddingTop: 4 }}>
             <button onClick={handleSignOut}
-              className="w-full flex items-center gap-2.5 px-3 py-[6px] text-[13px] text-[#DC2626] hover:bg-red-50 transition-colors text-left">
-              <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
-              Log out
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
+                fontSize: 13, color: '#DC2626', border: 'none', background: 'transparent',
+                cursor: 'pointer', borderRadius: 6, textAlign: 'left',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FEF2F2' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            >
+              <LogOut size={13} style={{ flexShrink: 0 }} /> Log out
             </button>
           </div>
         </div>
@@ -196,7 +348,7 @@ function UserMenu() {
   )
 }
 
-// ─── Topbar ────────────────────────────────────────────────────────────────
+// ─── Topbar ─────────────────────────────────────────────────────────────────
 function Topbar() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -210,22 +362,38 @@ function Topbar() {
   const title = titles.find(([k]) => location.pathname.startsWith(k))?.[1] ?? 'Home'
 
   return (
-    <header className="h-11 flex-shrink-0 flex items-center justify-between px-5 border-b border-[#E8E7E5] bg-white/92 backdrop-blur-sm sticky top-0 z-10">
-      <div className="flex items-center gap-1 text-[12.5px]">
-        <span className="text-[#9b9b9b]">Dyson</span>
-        <span className="text-[#d0d0d0] mx-0.5">/</span>
-        <span className="text-[#1a1a1a] font-medium">{title}</span>
+    <header style={{
+      height: 44, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 20px',
+      borderBottom: '1px solid #E8E7E5',
+      background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
+      position: 'sticky', top: 0, zIndex: 20,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5 }}>
+        <span style={{ color: '#9b9b9b' }}>Dyson</span>
+        <span style={{ color: '#d0d0d0', margin: '0 2px' }}>/</span>
+        <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{title}</span>
       </div>
-      <div className="flex items-center gap-1">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button
           onClick={() => navigate('/app/recall')}
-          className="h-7 px-3 flex items-center gap-1.5 rounded-md bg-primary text-[12px] font-medium text-white hover:bg-primary-hover transition-colors"
+          style={{
+            height: 28, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 6,
+            background: '#5B5BD6', color: 'white', border: 'none', borderRadius: 6,
+            fontSize: 12, fontWeight: 500, cursor: 'pointer',
+          }}
         >
-          <Brain className="w-3.5 h-3.5" />
-          Recall
+          <Brain size={13} /> Recall
         </button>
-        <button className="w-7 h-7 flex items-center justify-center rounded-md text-[#9b9b9b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a] transition-colors">
-          <Bell className="w-4 h-4" />
+        <button style={{
+          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: 'none', borderRadius: 6, background: 'transparent', color: '#9b9b9b', cursor: 'pointer',
+        }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1'; (e.currentTarget as HTMLButtonElement).style.color = '#1a1a1a' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#9b9b9b' }}
+        >
+          <Bell size={15} />
         </button>
       </div>
     </header>
@@ -234,78 +402,131 @@ function Topbar() {
 
 // ─── App shell ─────────────────────────────────────────────────────────────
 export default function AppShell() {
+  const location   = useLocation()
+  const navigate   = useNavigate()
+  const isSettings = location.pathname.startsWith('/app/settings')
+
   return (
-    <div className="flex h-screen bg-[#FAFAF8] overflow-hidden">
+    <div style={{ display: 'flex', height: '100vh', background: '#FAFAF8', overflow: 'hidden', position: 'relative' }}>
 
       {/* Sidebar */}
-      <aside className="w-[240px] flex-shrink-0 flex flex-col bg-[#F7F6F3] border-r border-[#E8E7E5] select-none overflow-hidden">
+      <aside style={{
+        width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        background: '#F7F6F3', borderRight: '1px solid #E8E7E5',
+        overflow: 'hidden', userSelect: 'none',
+      }}>
 
-        {/* Workspace switcher */}
-        <div className="px-2 pt-3 pb-2 flex-shrink-0">
+        {/* Workspace */}
+        <div style={{ padding: '12px 8px 4px' }}>
           <WorkspaceSwitcher />
         </div>
 
-        {/* Quick actions — search + settings, no duplicates */}
-        <div className="px-2 pb-1 flex-shrink-0 space-y-0.5">
-          <Link to="/app/search">
-            <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
-              <Search className="w-[15px] h-[15px] text-[#9b9b9b]" />
-              <span className="flex-1 text-[13.5px] text-[#6b6b6b] group-hover:text-[#1a1a1a] transition-colors">Search</span>
-              <kbd className="text-[10px] text-[#c0c0c0] font-mono opacity-0 group-hover:opacity-100 transition-opacity">⌘K</kbd>
-            </div>
-          </Link>
-          <Link to="/app/settings">
-            <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
-              <Settings className="w-[15px] h-[15px] text-[#9b9b9b]" />
-              <span className="text-[13.5px] text-[#6b6b6b] group-hover:text-[#1a1a1a] transition-colors">Settings & members</span>
-            </div>
-          </Link>
+        {/* Quick actions */}
+        <div style={{ padding: '0 8px 4px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {[
+            { to: '/app/search', icon: Search, label: 'Search', shortcut: '⌘K' },
+          ].map(item => (
+            <Link key={item.to} to={item.to} style={{ textDecoration: 'none' }}>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '5px 8px', borderRadius: 6, cursor: 'pointer',
+                  color: '#6b6b6b', fontSize: 13.5, transition: 'background 80ms',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.color = '#1a1a1a' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#6b6b6b' }}
+              >
+                <item.icon size={15} style={{ color: '#9b9b9b', flexShrink: 0 }} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.shortcut && <kbd style={{ fontSize: 10, color: '#c0c0c0', fontFamily: 'monospace' }}>{item.shortcut}</kbd>}
+              </div>
+            </Link>
+          ))}
         </div>
 
-        <div className="mx-3 my-1 border-t border-[#E8E7E5] flex-shrink-0" />
+        <div style={{ margin: '4px 12px', borderTop: '1px solid #E8E7E5' }} />
 
-        {/* Main navigation — each item appears exactly once */}
-        <nav className="flex-1 overflow-y-auto px-2 py-1 flex flex-col gap-0.5">
-
+        {/* Main nav */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
           <NavItem to="/app"                   icon={LayoutDashboard} label="Home"           exact />
           <NavItem to="/app/recall"            icon={Brain}           label="Recall"         />
           <NavItem to="/app/decisions"         icon={Network}         label="Memory Graph"   badge={8} />
           <NavItem to="/app/onboarding-packs"  icon={Users}           label="Team Briefings" />
 
-          <div className="h-3" />
+          <div style={{ height: 8 }} />
 
-          {/* Sources — collapsible */}
+          {/* Sources with real logos */}
           <SidebarSection label="Sources">
-            <SourceItem name="Slack"  dotColor="#E01E5A" connected={true}  />
-            <SourceItem name="GitHub" dotColor="#656D76" connected={true}  />
-            <SourceItem name="Notion" dotColor="#37352F" connected={false} />
-            <SourceItem name="Linear" dotColor="#5E6AD2" connected={false} />
-            <Link to="/app/settings/sources">
-              <div className="flex items-center gap-2 px-2 py-[5px] rounded-md hover:bg-[rgba(0,0,0,0.04)] transition-colors group cursor-pointer">
-                <Plus className="w-3.5 h-3.5 text-[#c0c0c0] group-hover:text-[#9b9b9b]" />
-                <span className="text-[13.5px] text-[#b0b0b0] group-hover:text-[#6b6b6b] transition-colors">Add source</span>
+            <SourceItem name="Slack"  logo={<SlackLogo size={13} />}  connected={true}  />
+            <SourceItem name="GitHub" logo={<GitHubLogo size={13} />} connected={true}  />
+            <SourceItem name="Notion" logo={<NotionLogo size={13} />} connected={false} />
+            <SourceItem name="Linear" logo={<LinearLogo size={13} />} connected={false} />
+            <Link to="/app/settings/sources" style={{ textDecoration: 'none' }}>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '5px 8px', borderRadius: 6, cursor: 'pointer',
+                  fontSize: 13.5, color: '#b0b0b0', transition: 'background 80ms',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.color = '#6b6b6b' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#b0b0b0' }}
+              >
+                <Plus size={13} style={{ color: '#c0c0c0' }} /> Add source
               </div>
             </Link>
           </SidebarSection>
         </nav>
 
-        {/* Bottom — trash + user menu */}
-        <div className="px-2 py-2 border-t border-[#E8E7E5] flex-shrink-0 space-y-0.5">
-          <button className="w-full flex items-center gap-2 px-2 py-[5px] rounded-md text-[13.5px] text-[#6b6b6b] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#1a1a1a] transition-colors text-left">
-            <Trash2 className="w-[15px] h-[15px] text-[#9b9b9b]" />
-            Trash
+        {/* Bottom */}
+        <div style={{ padding: '8px', borderTop: '1px solid #E8E7E5', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: 7, padding: '5px 8px',
+            borderRadius: 6, border: 'none', background: 'transparent',
+            fontSize: 13.5, color: '#6b6b6b', cursor: 'pointer', textAlign: 'left',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.04)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          >
+            <Trash2 size={15} style={{ color: '#9b9b9b', flexShrink: 0 }} /> Trash
           </button>
           <UserMenu />
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Topbar />
-        <main className="flex-1 overflow-y-auto bg-white">
-          <Outlet />
+        <main style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
+          {!isSettings && <Outlet />}
         </main>
       </div>
+
+      {/* Settings modal overlay */}
+      {isSettings && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => navigate('/app')}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100,
+              background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(2px)',
+              cursor: 'pointer',
+            }}
+          />
+          {/* Modal card */}
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 101,
+            width: 'min(92vw, 980px)', height: 'min(88vh, 720px)',
+            background: 'white', borderRadius: 14,
+            display: 'flex', overflow: 'hidden',
+            boxShadow: '0 28px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)',
+          }}>
+            <Outlet />
+          </div>
+        </>
+      )}
     </div>
   )
 }

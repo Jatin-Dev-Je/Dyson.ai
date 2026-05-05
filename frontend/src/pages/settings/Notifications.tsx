@@ -1,76 +1,79 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 type Setting = { id: string; label: string; sub: string; email: boolean; slack: boolean }
 
-const defaults: Setting[] = [
-  { id: 'new_decision',  label: 'New decision detected',         sub: 'When Dyson detects a new decision in your stack',         email: true,  slack: true  },
-  { id: 'weekly_digest', label: 'Weekly decision digest',        sub: 'Summary of decisions made in the past week',              email: true,  slack: false },
-  { id: 'low_confidence',label: 'Low confidence answers',        sub: 'When a WHY Engine query returns confidence below 72%',    email: false, slack: true  },
-  { id: 'new_member',    label: 'New team member joined',        sub: 'When someone accepts your invite',                        email: true,  slack: false },
-  { id: 'onboarding',    label: 'Onboarding pack generated',     sub: 'When a new context pack is ready',                       email: true,  slack: true  },
-  { id: 'source_error',  label: 'Source connection error',       sub: 'When a connected source loses access',                    email: true,  slack: true  },
+const DEFAULTS: Setting[] = [
+  { id: 'new_decision',   label: 'New decision detected',    sub: 'When Dyson detects a new decision in your stack',      email: true,  slack: true  },
+  { id: 'weekly_digest',  label: 'Weekly memory digest',     sub: 'Summary of decisions made in the past week',            email: true,  slack: false },
+  { id: 'low_confidence', label: 'Low confidence answers',   sub: 'When a recall query returns confidence below 72%',      email: false, slack: true  },
+  { id: 'new_member',     label: 'New team member joined',   sub: 'When someone accepts your invite',                      email: true,  slack: false },
+  { id: 'onboarding',     label: 'Team briefing generated',  sub: 'When a new context pack is ready',                     email: true,  slack: true  },
+  { id: 'source_error',   label: 'Source connection error',  sub: 'When a connected source loses access',                  email: true,  slack: true  },
 ]
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       onClick={() => onChange(!on)}
+      style={{ transition: 'background 200ms' }}
       className={cn(
-        'relative w-9 h-5 rounded-full transition-all duration-200 flex-shrink-0',
-        on ? 'bg-primary' : 'bg-white/[0.10]'
+        'relative w-9 h-5 rounded-full flex-shrink-0 focus:outline-none',
+        on ? 'bg-primary' : 'bg-line-strong',
       )}
     >
       <span className={cn(
         'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200',
-        on ? 'left-[18px]' : 'left-0.5'
+        on ? 'left-[18px]' : 'left-0.5',
       )} />
     </button>
   )
 }
 
 export default function Notifications() {
-  const [settings, setSettings] = useState(defaults)
+  const [settings, setSettings] = useState(DEFAULTS)
 
   function update(id: string, field: 'email' | 'slack', val: boolean) {
     setSettings(v => v.map(s => s.id === id ? { ...s, [field]: val } : s))
   }
 
   return (
-    <div className="px-10 py-8 max-w-[680px]">
-      <div className="mb-8">
-        <h1 className="text-[20px] font-semibold text-ink-1 mb-1">Notifications</h1>
+    <div className="px-7 py-7 max-w-[640px]">
+
+      <div className="mb-7">
+        <h1 className="text-[19px] font-semibold text-ink-1 mb-1">Notifications</h1>
         <p className="text-[13px] text-ink-3">Choose how and when Dyson notifies you.</p>
       </div>
 
-      <div className="rounded-lg border border-line bg-surface overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-[1fr_72px_72px] gap-4 px-5 py-3 border-b border-line">
-          <span className="text-[10px] font-mono text-ink-3 uppercase tracking-wider">Notification</span>
-          <span className="text-[10px] font-mono text-ink-3 uppercase tracking-wider text-center">Email</span>
-          <span className="text-[10px] font-mono text-ink-3 uppercase tracking-wider text-center">Slack</span>
+      <div className="rounded-xl border border-line bg-white overflow-hidden">
+        {/* Column headers */}
+        <div className="grid grid-cols-[1fr_80px_80px] gap-4 px-5 py-3 border-b border-line bg-subtle">
+          <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Notification</span>
+          <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-wider text-center">Email</span>
+          <span className="text-[10px] font-semibold text-ink-3 uppercase tracking-wider text-center">Slack</span>
         </div>
 
-        <div className="divide-y divide-white/[0.04]">
-          {settings.map(s => (
-            <div key={s.id} className="grid grid-cols-[1fr_72px_72px] gap-4 items-center px-5 py-4 hover:bg-subtle transition-colors">
-              <div>
-                <p className="text-[13px] text-ink-2">{s.label}</p>
-                <p className="text-[11.5px] text-ink-3 mt-0.5">{s.sub}</p>
-              </div>
-              <div className="flex justify-center">
-                <Toggle on={s.email} onChange={v => update(s.id, 'email', v)} />
-              </div>
-              <div className="flex justify-center">
-                <Toggle on={s.slack} onChange={v => update(s.id, 'slack', v)} />
-              </div>
+        {settings.map((s, i) => (
+          <div
+            key={s.id}
+            className={cn(
+              'grid grid-cols-[1fr_80px_80px] gap-4 items-center px-5 py-4 hover:bg-subtle transition-colors',
+              i < settings.length - 1 && 'border-b border-line',
+            )}
+          >
+            <div>
+              <p className="text-[13px] font-medium text-ink-1">{s.label}</p>
+              <p className="text-[11.5px] text-ink-3 mt-0.5">{s.sub}</p>
             </div>
-          ))}
-        </div>
+            <div className="flex justify-center">
+              <Toggle on={s.email} onChange={v => update(s.id, 'email', v)} />
+            </div>
+            <div className="flex justify-center">
+              <Toggle on={s.slack} onChange={v => update(s.id, 'slack', v)} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
-
-
-
