@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import {
   Brain, Network, Users, Search, Settings, ChevronDown,
-  LogOut, User, CreditCard, Plus, Bell, LayoutDashboard,
-  ChevronRight, Trash2, FileText,
+  LogOut, Plus, Bell, LayoutDashboard,
+  ChevronRight, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { authApi, tokens } from '@/lib/api'
@@ -309,26 +309,19 @@ function UserMenu() {
             <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{name}</p>
             {email && <p style={{ fontSize: 11, color: '#9b9b9b', margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</p>}
           </div>
-          {[
-            { icon: User,       label: 'My profile',     path: '/app/settings/profile'   },
-            { icon: Settings,   label: 'Settings',        path: '/app/settings'           },
-            { icon: CreditCard, label: 'Plans & billing', path: '/app/settings/billing'   },
-            { icon: FileText,   label: 'Audit log',       path: '/app/settings/audit-log' },
-          ].map(item => (
-            <button key={item.label}
-              onClick={() => { navigate(item.path); setOpen(false) }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
-                fontSize: 13, color: '#6b6b6b', border: 'none', background: 'transparent',
-                cursor: 'pointer', borderRadius: 6, textAlign: 'left',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1'; (e.currentTarget as HTMLButtonElement).style.color = '#1a1a1a' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b6b6b' }}
-            >
-              <item.icon size={13} style={{ color: '#9b9b9b', flexShrink: 0 }} />
-              {item.label}
-            </button>
-          ))}
+          <button
+            onClick={() => { navigate('/app/settings/profile'); setOpen(false) }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
+              fontSize: 13, color: '#6b6b6b', border: 'none', background: 'transparent',
+              cursor: 'pointer', borderRadius: 6, textAlign: 'left',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F1'; (e.currentTarget as HTMLButtonElement).style.color = '#1a1a1a' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b6b6b' }}
+          >
+            <Settings size={13} style={{ color: '#9b9b9b', flexShrink: 0 }} />
+            Settings
+          </button>
           <div style={{ borderTop: '1px solid #F0EFED', marginTop: 4, paddingTop: 4 }}>
             <button onClick={handleSignOut}
               style={{
