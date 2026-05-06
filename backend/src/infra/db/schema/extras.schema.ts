@@ -38,6 +38,21 @@ export const apiKeys = pgTable('api_keys', {
   keyHashIdx:   uniqueIndex('api_keys_hash_idx').on(t.keyHash),
 }))
 
+// ─── Notification preferences ─────────────────────────────────────────────
+// One row per user — created on first save, defaults used if row absent.
+
+export const notificationPrefs = pgTable('notification_prefs', {
+  id:        uuid('id').primaryKey().defaultRandom(),
+  userId:    uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId:  uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  email:     jsonb('email').notNull().default({}),   // NotificationPrefs JSON
+  slack:     jsonb('slack').notNull().default({}),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, t => ({
+  userIdx:   uniqueIndex('notif_prefs_user_idx').on(t.userId),
+  tenantIdx: index('notif_prefs_tenant_idx').on(t.tenantId),
+}))
+
 // ─── Audit log ────────────────────────────────────────────────────────────
 
 export const auditLog = pgTable('audit_log', {

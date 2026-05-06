@@ -1,0 +1,111 @@
+version: "3.9"
+
+# Local development stack — runs the full Dyson platform with one command.
+#
+# Usage:
+#   docker compose up          # start everything
+#   docker compose up api      # start only the TypeScript API
+#   docker compose logs -f     # stream all logs
+#
+# Services:
+#   api           TypeScript Fastify API       → http://localhost:8080
+#   agent         Python FastAPI agent runtime → http://localhost:8001
+#   db            Postgres + pgvector          → localhost:5432
+#   redis         Redis (rate limiting + cache)→ localhost:6379
+#
+# Note: Frontend runs separately via `cd frontend && npm run dev` (Vite HMR).
+#
+# First time:
+#   1. cp backend/.env.example backend/.env   (fill in Gemini + Cohere keys)
+#   2. docker compose up db -d                (start only DB)
+#   3. cd backend && npm run db:migrate       (run migrations)
+#   4. docker compose up                      (start everything)
+
+services:
+
+  # ── Postgres + pgvector ───────────────────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     dyson
+      POSTGRES_PASSWORD: dyson_dev
+      POSTGRES_DB:       dyson
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dyson"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout:  3s
+      retries:  5
+
+  # ── TypeScript API (Fastify) ──────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV:            development
+      PORT:                8080
+      DATABASE_URL:        postgres://dyson:dyson_dev@db:5432/dyson
+      DATABASE_URL_POOLED: postgres://dyson:dyson_dev@db:5432/dyson
+      REDIS_URL:           redis://redis:6379
+      AGENT_RUNTIME_URL:   http://agent:8001
+      SWAGGER_ENABLED:     "true"
+      CORS_ORIGINS:        "http://localhost:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+      start_period: 20s
+
+  # ── Python Agent Runtime (FastAPI) ────────────────────────────────────────
+  agent:
+    build:
+      context: ./backend/python
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file: ./backend/python/.env.example
+    environment:
+      DYSON_API_URL: http://api:8080
+      DEBUG:         "true"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+      start_period: 40s
+
+volumes:
+  db_data:

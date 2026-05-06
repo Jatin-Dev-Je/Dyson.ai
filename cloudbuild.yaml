@@ -1,81 +1,139 @@
 # Google Cloud Build — CI/CD pipeline.
-# Triggers: push to main (deploy), push to any PR branch (test only).
 #
-# Required substitutions (Cloud Build trigger config):
+# Triggers:
+#   push to main    → full pipeline (test → build → deploy)
+#   push to PR      → test + build only (no deploy)
+#
+# Required substitutions (set in Cloud Build trigger config):
 #   _PROJECT_ID     — GCP project ID
 #   _REGION         — Cloud Run region (e.g. us-central1)
-#   _SERVICE_NAME   — Cloud Run service name (e.g. dyson-api)
-#   _IMAGE          — gcr.io/$PROJECT_ID/dyson-api
+#   _SERVICE_NAME   — TypeScript API Cloud Run service name (e.g. dyson-api)
+#   _AGENT_SERVICE  — Python agent Cloud Run service name (e.g. dyson-agent)
+#   _API_IMAGE      — gcr.io/$PROJECT_ID/dyson-api
+#   _AGENT_IMAGE    — gcr.io/$PROJECT_ID/dyson-agent
+#   _DEPLOY         — "true" on main branch, "false" on PRs
 
 steps:
 
-  # ── 1. Install dependencies ───────────────────────────────────────────────
+  # ── 1. Install TypeScript dependencies ───────────────────────────────────
   - name: node:22-alpine
-    id: install
-    dir: backend
+    id:   ts-install
+    dir:  backend
     entrypoint: npm
     args: [ci, --no-audit, --no-fund]
 
-  # ── 2. Typecheck ──────────────────────────────────────────────────────────
+  # ── 2. TypeScript checks (typecheck + lint) — run in parallel ────────────
   - name: node:22-alpine
-    id: typecheck
-    dir: backend
+    id:   ts-typecheck
+    dir:  backend
     entrypoint: npm
     args: [run, typecheck]
-    waitFor: [install]
+    waitFor: [ts-install]
 
-  # ── 3. Lint ───────────────────────────────────────────────────────────────
   - name: node:22-alpine
-    id: lint
-    dir: backend
+    id:   ts-lint
+    dir:  backend
     entrypoint: npm
     args: [run, lint]
-    waitFor: [install]
+    waitFor: [ts-install]
 
-  # ── 4. Tests ──────────────────────────────────────────────────────────────
+  # ── 3. TypeScript tests ───────────────────────────────────────────────────
   - name: node:22-alpine
-    id: test
-    dir: backend
+    id:   ts-test
+    dir:  backend
     entrypoint: npm
     args: [test]
-    waitFor: [install]
+    waitFor: [ts-install]
 
-  # ── 5. Build Docker image ─────────────────────────────────────────────────
+  # ── 4. Python agent runtime tests ────────────────────────────────────────
+  - name: python:3.12-slim
+    id:   py-test
+    dir:  backend/python
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install --quiet -r requirements.txt
+        python -m spacy download en_core_web_sm --quiet
+        python -m pytest tests/ -v --tb=short
+    waitFor: ["-"]    # starts immediately, independent of TS steps
+
+  # ── 5. Build TypeScript Docker image ─────────────────────────────────────
   - name: gcr.io/cloud-builders/docker
-    id: build
+    id:   build-api
     args:
       - build
-      - --tag=$_IMAGE:$SHORT_SHA
-      - --tag=$_IMAGE:latest
-      - --cache-from=$_IMAGE:latest
+      - --tag=$_API_IMAGE:$SHORT_SHA
+      - --tag=$_API_IMAGE:latest
+      - --cache-from=$_API_IMAGE:latest
       - ./backend
-    waitFor: [typecheck, lint, test]
+    waitFor: [ts-typecheck, ts-lint, ts-test]
 
-  # ── 6. Push to Container Registry ─────────────────────────────────────────
+  # ── 6. Build Python Docker image ─────────────────────────────────────────
   - name: gcr.io/cloud-builders/docker
-    id: push
-    args: [push, --all-tags, $_IMAGE]
-    waitFor: [build]
-
-  # ── 7. Deploy to Cloud Run ────────────────────────────────────────────────
-  - name: gcr.io/cloud-builders/gcloud
-    id: deploy
+    id:   build-agent
     args:
-      - run
-      - deploy
-      - $_SERVICE_NAME
-      - --image=$_IMAGE:$SHORT_SHA
-      - --region=$_REGION
-      - --platform=managed
-      - --quiet
-    waitFor: [push]
+      - build
+      - --tag=$_AGENT_IMAGE:$SHORT_SHA
+      - --tag=$_AGENT_IMAGE:latest
+      - --cache-from=$_AGENT_IMAGE:latest
+      - ./backend/python
+    waitFor: [py-test]
+
+  # ── 7. Push images ────────────────────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id:   push-api
+    args: [push, --all-tags, $_API_IMAGE]
+    waitFor: [build-api]
+
+  - name: gcr.io/cloud-builders/docker
+    id:   push-agent
+    args: [push, --all-tags, $_AGENT_IMAGE]
+    waitFor: [build-agent]
+
+  # ── 8. Deploy to Cloud Run (main branch only) ─────────────────────────────
+  - name: gcr.io/cloud-builders/gcloud
+    id:   deploy-api
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [ "$_DEPLOY" = "true" ]; then
+          gcloud run deploy $_SERVICE_NAME \
+            --image=$_API_IMAGE:$SHORT_SHA \
+            --region=$_REGION \
+            --platform=managed \
+            --quiet
+        else
+          echo "Skipping deploy — not main branch"
+        fi
+    waitFor: [push-api]
+
+  - name: gcr.io/cloud-builders/gcloud
+    id:   deploy-agent
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [ "$_DEPLOY" = "true" ]; then
+          gcloud run deploy $_AGENT_SERVICE \
+            --image=$_AGENT_IMAGE:$SHORT_SHA \
+            --region=$_REGION \
+            --platform=managed \
+            --quiet
+        else
+          echo "Skipping deploy — not main branch"
+        fi
+    waitFor: [push-agent]
 
 images:
-  - $_IMAGE:$SHORT_SHA
-  - $_IMAGE:latest
+  - $_API_IMAGE:$SHORT_SHA
+  - $_API_IMAGE:latest
+  - $_AGENT_IMAGE:$SHORT_SHA
+  - $_AGENT_IMAGE:latest
 
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging:     CLOUD_LOGGING_ONLY
   machineType: E2_HIGHCPU_8
 
-timeout: 1200s   # 20 min max — Docker layer caching keeps this under 5 min in practice
+timeout: 1800s   # 30 min — Python deps + spaCy download is slow on cold builds

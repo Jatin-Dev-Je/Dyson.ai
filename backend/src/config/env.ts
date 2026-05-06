@@ -51,6 +51,13 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-1.5-flash-latest'),
 
+  // ── Python Agent Runtime ─────────────────────────────────────────────────
+  // URL of the Python FastAPI microservice (backend/python/).
+  // In dev: http://localhost:8001 (run: cd backend/python && uvicorn agent_runtime.main:app --port 8001)
+  // In prod: set to the Cloud Run service URL of the Python container.
+  // Optional — if unset, agent features degrade gracefully (returns errors, doesn't crash).
+  AGENT_RUNTIME_URL: z.string().url().optional(),
+
   // ── Redis — distributed rate limiting ────────────────────────────────────
   // Optional in dev (falls back to in-memory per-instance limiting).
   // Required in production for correct rate limiting across multiple Cloud

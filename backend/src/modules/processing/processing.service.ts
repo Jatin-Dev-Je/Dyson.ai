@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
+import { sql } from 'drizzle-orm'
 import { extractEntities } from './processors/entity-extractor.js'
 import { detectDecision } from './processors/decision-detector.js'
 import { generateEmbedding } from './processors/embedding-generator.js'
@@ -9,6 +10,8 @@ import { markEventComplete, markEventFailed } from '../ingestion/ingestion.repos
 import { enqueue } from '@/infra/queue/queue.client.js'
 import { RelationshipType, EventSource } from '@/shared/types/entities.js'
 import type { NormalizedEvent } from '../ingestion/ingestion.types.js'
+import { db } from '@/infra/db/client.js'
+import { contextNodes } from '@/infra/db/schema/index.js'
 
 // ─── Process a single raw event into a context node ──────────────────────
 
@@ -142,7 +145,38 @@ export async function buildEdgesForNode(
   }
 
   // Rule 2: Slack message in same channel as a recent decision → discussed_in
-  // (Temporal proximity linking — implemented in Week 4 with graph traversal)
+  // Link Slack messages to decisions made in the same channel within 7 days.
+  // Rationale: channel context is the strongest signal for decision provenance.
+  if (source === EventSource.Slack) {
+    const channelId = metadata['channelId'] as string | undefined
+    if (channelId) {
+      const recentDecisions = await db
+        .select({ id: contextNodes.id })
+        .from(contextNodes)
+        .where(
+          sql`
+            tenant_id    = ${tenantId}::uuid
+            AND is_decision = true
+            AND metadata->>'channelId' = ${channelId}
+            AND occurred_at > NOW() - INTERVAL '7 days'
+            AND id != ${nodeId}::uuid
+          `
+        )
+        .limit(3)
+
+      for (const decision of recentDecisions) {
+        await upsertEdge({
+          tenantId,
+          sourceNodeId:     nodeId,
+          targetNodeId:     decision.id,
+          relationshipType: RelationshipType.DiscussedIn,
+          confidence:       0.65,
+          metadata:         { rule: 'slack_channel_proximity', channelId, windowDays: 7 },
+        })
+        logger.info({ nodeId, decisionNodeId: decision.id, channelId }, 'Edge built: message discussed in decision channel')
+      }
+    }
+  }
 
   // Rule 3: PR body links to a Notion URL → depends_on
   const urls = (metadata['urls'] as string[] | undefined) ?? []

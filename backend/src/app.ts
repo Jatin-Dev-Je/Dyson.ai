@@ -3,6 +3,7 @@ import { env } from './config/env.js'
 import { db } from './infra/db/client.js'
 import { getRedisClient } from './infra/redis.js'
 import { geminiBreaker, cohereBreaker } from './infra/circuit-breaker.js'
+import { agentRuntimeClient } from './infra/agent-runtime-client.js'
 import { sql } from 'drizzle-orm'
 
 export async function buildApp() {
@@ -96,13 +97,18 @@ export async function buildApp() {
     env:     env.NODE_ENV,
   }))
 
-  // /health/ready — readiness (checks DB connection)
+  // /health/ready — readiness: checks DB + optional agent runtime
   app.get('/health/ready', { schema: { hide: true } }, async (_req, reply) => {
     try {
       await db.execute(sql`SELECT 1`)
-      return { status: 'ok' }
     } catch {
       return reply.status(503).send({ status: 'unavailable', reason: 'database' })
+    }
+    return {
+      status: 'ok',
+      agentRuntime: env.AGENT_RUNTIME_URL
+        ? await agentRuntimeClient.isHealthy() ? 'ok' : 'unavailable'
+        : 'not_configured',
     }
   })
 
@@ -169,6 +175,7 @@ export async function buildApp() {
   await app.register(import('./modules/onboarding-packs/packs.routes.js'),  { prefix: '/api/v1/onboarding-packs' })
   await app.register(import('./modules/api-keys/apikeys.routes.js'),        { prefix: '/api/v1/api-keys' })
   await app.register(import('./modules/audit/audit.routes.js'),             { prefix: '/api/v1/audit-log' })
+  await app.register(import('./modules/notifications/notifications.routes.js'), { prefix: '/api/v1/notifications' })
   await app.register(import('./modules/agent/agent.routes.js'),             { prefix: '/api/v1/agent' })
 
   // ── Model Context Protocol (MCP) ──────────────────────────────────────────
