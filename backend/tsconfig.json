@@ -23,13 +23,9 @@
     "noImplicitOverride": true,
     "forceConsistentCasingInFileNames": true,
 
-    /* ── Module interop ─────────────────────────────────────────── */
+    /* ── Interop ─────────────────────────────────────────────────── */
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    /* verbatimModuleSyntax: true enforces `import type` for type-only
-       imports — required for correct NodeNext ESM semantics. Prevents
-       runtime crashes from imports that emit nothing in output. */
-    "verbatimModuleSyntax": true,
 
     /* ── Output ─────────────────────────────────────────────────── */
     "sourceMap": true,
