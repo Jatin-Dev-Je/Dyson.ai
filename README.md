@@ -122,72 +122,94 @@ Dyson ingests every decision, incident, and architectural choice from Slack, Git
 
 ```
 dyson/
-├── backend/                      Node.js API server + MCP
+├── backend/                       Node.js API server + MCP
 │   ├── src/
-│   │   ├── app.ts                Fastify app factory, route registration
-│   │   ├── server.ts             HTTP entry point
+│   │   ├── app.ts                 Fastify app factory, all route registration
+│   │   ├── server.ts              HTTP entry point
 │   │   ├── config/
-│   │   │   ├── env.ts            Zod-validated env (fails fast in prod)
-│   │   │   └── constants.ts      Domain constants
+│   │   │   ├── env.ts             Zod-validated env (fails fast on bad config)
+│   │   │   └── constants.ts       Domain constants
 │   │   ├── infra/
-│   │   │   ├── db/               Drizzle client, schemas, migrations
-│   │   │   ├── queue/            Cloud Tasks dispatcher
-│   │   │   ├── email.ts          Resend email provider
-│   │   │   ├── cache.ts          Caching layer
-│   │   │   └── retry.ts          Retry utilities
-│   │   ├── modules/
-│   │   │   ├── auth/             JWT auth, sessions, password reset
-│   │   │   ├── workspace/        Workspace management
-│   │   │   ├── users/            Users, invitations, roles
-│   │   │   ├── connectors/       OAuth for Slack + GitHub
-│   │   │   ├── ingestion/        Event normalization, dedup
-│   │   │   ├── processing/       Entity extraction, embeddings, edges
-│   │   │   ├── graph/            Context graph queries
-│   │   │   ├── decisions/        Decision detection + log
-│   │   │   ├── why/              WHY Engine (recall + composition)
-│   │   │   ├── memory/           Memory CRUD + retrieval
-│   │   │   ├── search/           Full-text + semantic search
-│   │   │   ├── onboarding-packs/ Generated context packs
-│   │   │   ├── api-keys/         Scoped agent API keys
-│   │   │   ├── agent/            REST agent API
-│   │   │   ├── agent-layer/mcp/  MCP server, HTTP transport, stdio
-│   │   │   ├── audit/            Audit log
-│   │   │   ├── slack-bot/        Slack App integration
-│   │   │   └── github-bot/       GitHub App integration
+│   │   │   ├── db/
+│   │   │   │   ├── client.ts      Drizzle + Postgres (pooled connection)
+│   │   │   │   ├── schema/        Table definitions (7 schema files)
+│   │   │   │   └── migrations/    Forward-only SQL migrations
+│   │   │   ├── queue/
+│   │   │   │   └── queue.client.ts  Cloud Tasks dispatcher
+│   │   │   ├── cache.ts           In-memory TTL cache (API key caching)
+│   │   │   ├── retry.ts           Exponential backoff with jitter
+│   │   │   ├── email.ts           Resend email provider
+│   │   │   └── github-app.ts      GitHub App authentication
+│   │   ├── jobs/                  Async job workers (Cloud Tasks)
+│   │   │   ├── process-event.job.ts
+│   │   │   ├── generate-embeddings.job.ts
+│   │   │   ├── build-edges.job.ts
+│   │   │   └── backfill-source.job.ts
+│   │   ├── modules/               Feature modules (cohesive: routes+service+repo)
+│   │   │   ├── auth/              JWT auth, sessions, password reset, email verify
+│   │   │   ├── workspace/         Workspace profile and settings
+│   │   │   ├── users/             Users, invitations, role management
+│   │   │   ├── connectors/        OAuth + backfill for Slack and GitHub
+│   │   │   ├── ingestion/         Event normalization, dedup, raw event storage
+│   │   │   │   └── connectors/    Per-source handlers (slack/, github/)
+│   │   │   ├── processing/        Entity extraction, decision detection, embeddings
+│   │   │   │   └── processors/    decision-detector, embedding-generator, entity-extractor
+│   │   │   ├── graph/             Context graph — nodes, edges, timeline
+│   │   │   ├── decisions/         Decision log: detect, list, detail
+│   │   │   ├── why/               Recall / WHY Engine — retrieval + Gemini composition
+│   │   │   │   ├── retrieval/     vector, lexical, graph, hybrid ranker, access filter
+│   │   │   │   └── llm/           Gemini client, prompt builder, response validator
+│   │   │   ├── memory/            Memory CRUD + agent writes
+│   │   │   ├── search/            Full-text + semantic search
+│   │   │   ├── onboarding-packs/  AI-generated context packs for new engineers
+│   │   │   ├── api-keys/          Scoped agent API key management
+│   │   │   ├── agent/             REST agent API (6 endpoints)
+│   │   │   ├── agent-layer/mcp/   MCP server, Streamable HTTP transport, stdio bridge
+│   │   │   ├── audit/             Audit log read API
+│   │   │   ├── slack-bot/         Slack bot: WHY answers, incident detection
+│   │   │   └── github-bot/        GitHub bot: PR decision annotations
 │   │   ├── api/
-│   │   │   ├── middleware/       Auth, RBAC, signature verification
+│   │   │   ├── middleware/        auth.middleware, rbac.middleware, signature.middleware
 │   │   │   └── routes/
-│   │   │       ├── webhooks/     Slack + GitHub webhook receivers
-│   │   │       ├── jobs.routes.ts Cloud Tasks job handlers
-│   │   │       └── v1/           Versioned REST endpoints
+│   │   │       ├── webhooks/      slack.webhook.ts, github.webhook.ts
+│   │   │       └── jobs.routes.ts Cloud Tasks job handler (signed with JOB_SECRET)
 │   │   └── shared/
-│   │       ├── errors.ts         Custom error hierarchy
-│   │       └── types/            Shared TypeScript types
-│   ├── tests/                    Vitest unit + integration tests
-│   ├── tsconfig.json             NodeNext module resolution
+│   │       ├── errors.ts          Custom error hierarchy (DysonError, NotFoundError…)
+│   │       └── types/             api.ts, entities.ts — shared TypeScript types
+│   ├── tests/                     Vitest — 12 test files, 118+ passing
+│   ├── tsconfig.json              NodeNext/NodeNext module resolution
 │   └── package.json
 │
-├── frontend/                     React + Vite web app
+├── frontend/                      React 18 + Vite + Tailwind
 │   ├── src/
-│   │   ├── App.tsx               React Router tree
+│   │   ├── App.tsx                React Router tree (all routes)
+│   │   ├── main.tsx               Vite entry point
 │   │   ├── pages/
-│   │   │   ├── auth/             Login, Signup, Password reset, Accept invite
-│   │   │   ├── onboarding/       New user onboarding flow
-│   │   │   ├── app/              Dashboard, Recall, Memory Graph, Search, Packs
-│   │   │   └── settings/         Profile, Workspace, Sources, Members, Billing…
+│   │   │   ├── auth/              Login, Signup, ForgotPassword, ResetPassword, AcceptInvite
+│   │   │   ├── onboarding/        5-step workspace setup wizard
+│   │   │   ├── app/               Dashboard, WhyEngine, DecisionLog, GlobalSearch
+│   │   │   │   └── onboarding-packs/  OnboardingPacks, PackDetail
+│   │   │   └── settings/          Profile, Workspace, ConnectedSources, TeamMembers,
+│   │   │                          Billing, Notifications, ApiKeys, AuditLog, Security
 │   │   ├── components/
-│   │   │   ├── layout/           AppShell (collapsible sidebar), ProtectedRoute
-│   │   │   └── shared/           SourcePill, ConfidenceBadge, DysonMark, OAuthButton
-│   │   └── lib/
-│   │       ├── api.ts            Typed fetch client with auto-refresh
-│   │       └── auth.ts           Auth state (localStorage shim)
-│   ├── tailwind.config.ts        Design tokens (canvas, ink, primary…)
+│   │   │   ├── layout/            AppShell (collapsible sidebar + settings modal),
+│   │   │   │                      ProtectedRoute, CommandPalette, NotificationPanel
+│   │   │   ├── shared/            SourcePill, ConfidenceBadge, DysonMark, OAuthButton
+│   │   │   └── ui/                Button, Card, Badge, Input (Radix + Tailwind primitives)
+│   │   ├── lib/
+│   │   │   ├── api.ts             Typed fetch client with auto JWT refresh
+│   │   │   ├── auth.ts            Auth state (localStorage + token helpers)
+│   │   │   └── utils.ts           cn(), getConfidenceLevel(), misc helpers
+│   │   └── styles/
+│   │       └── globals.css        Tailwind directives + CSS custom properties
+│   ├── tailwind.config.ts         Design tokens: canvas, ink, primary, line…
 │   └── package.json
 │
 ├── docs/
-│   └── DEPLOYMENT.md             Full Cloud Run + Supabase runbook
-├── CLAUDE.md                     Engineering guide for contributors
-└── cloudbuild.yaml               Google Cloud Build CI/CD
+│   └── DEPLOYMENT.md              Full Cloud Run + Supabase runbook
+├── CLAUDE.md                      Engineering guide for contributors
+├── cloudbuild.yaml                Google Cloud Build CI/CD pipeline
+└── README.md                      This file
 ```
 
 ---
