@@ -5,6 +5,9 @@ import { sql } from 'drizzle-orm'
 
 export async function buildApp() {
   const app = Fastify({
+    // Every request gets a UUID that appears in every log line as `reqId`.
+    // This makes it trivial to grep all logs for a single failed request.
+    genReqId: () => crypto.randomUUID(),
     logger: {
       level: env.NODE_ENV === 'production' ? 'info' : 'debug',
       ...(env.NODE_ENV !== 'production' && {
@@ -87,9 +90,12 @@ export async function buildApp() {
   })
 
   // /metrics — lightweight operational metrics for Cloud Monitoring / alerting.
-  // Per CLAUDE.md §15: cannot_answer rate, ingestion lag, and error rates.
-  // Not authenticated — mount behind a VPC or load-balancer firewall in production.
-  app.get('/metrics', { schema: { hide: true } }, async () => {
+  // Protected by JOB_SECRET so only internal callers (Cloud Scheduler, Cloud
+  // Tasks) can reach it. Pass the secret as: X-Metrics-Secret: <JOB_SECRET>
+  app.get('/metrics', { schema: { hide: true } }, async (req, reply) => {
+    if (req.headers['x-metrics-secret'] !== env.JOB_SECRET) {
+      return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Invalid metrics secret' } })
+    }
     const [whyStats] = await db.execute<{
       total: string; cannot_answer: string; avg_confidence: string; avg_latency_ms: string
     }>(sql`
