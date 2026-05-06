@@ -27,7 +27,7 @@ export type SourceNodeSummary = {
   occurredAt:  Date
   similarity:  number
   isDecision:  boolean
-  retrieval?:   'vector' | 'lexical' | 'graph'
+  retrieval?:   'vector' | 'lexical' | 'graph' | 'hybrid'
 }
 
 export type GeminiWhyResponse = {

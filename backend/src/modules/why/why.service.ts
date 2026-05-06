@@ -2,7 +2,9 @@ import { z } from 'zod'
 import type { FastifyBaseLogger } from 'fastify'
 import { env } from '@/config/env.js'
 import { CONFIDENCE_THRESHOLD } from '@/config/constants.js'
-import { NotFoundError } from '@/shared/errors.js'
+import { NotFoundError, LLMUnavailableError } from '@/shared/errors.js'
+import { geminiBreaker, CircuitOpenError } from '@/infra/circuit-breaker.js'
+import { queryResultCache } from '@/infra/query-cache.js'
 import { vectorSearch } from './retrieval/vector-retriever.js'
 import { lexicalSearch } from './retrieval/lexical-retriever.js'
 import { graphExpand } from './retrieval/graph-retriever.js'
@@ -37,6 +39,15 @@ export async function recall(
   logger: FastifyBaseLogger
 ): Promise<WhyEngineResult> {
   const startMs = Date.now()
+
+  // ── Cache check ────────────────────────────────────────────────────────────
+  // Return cached result for identical questions within 5-minute window.
+  // Skips vector search + graph traversal + LLM call on cache hit.
+  const cached = queryResultCache.get(tenantId, question)
+  if (cached) {
+    logger.info({ tenantId, questionLen: question.length, cacheHit: true }, 'memory recall served from cache')
+    return cached
+  }
 
   logger.info({ tenantId, questionLen: question.length }, 'memory recall started')
 
@@ -83,11 +94,24 @@ export async function recall(
     return buildCannotAnswerResult(question, tenantId, userId, selected, Date.now() - startMs, logger)
   }
 
-  const geminiResponse = await callGemini(question, selected, logger)
+  // ── LLM composition — circuit-breaker protected ───────────────────────────
+  // If Gemini is down or slow, the circuit opens and we degrade gracefully:
+  // return source nodes with cannotAnswer=true instead of a 500 error.
+  let geminiResponse = null
+  try {
+    geminiResponse = await geminiBreaker.call(() => callGemini(question, selected, logger))
+  } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      logger.warn({ tenantId, confidence }, 'Gemini circuit open — degrading to source nodes')
+    } else {
+      logger.warn({ tenantId, confidence, err }, 'Gemini call failed — degrading to source nodes')
+    }
+  }
+
   const verified = geminiResponse ? buildVerifiedAnswer(geminiResponse, selected) : null
 
-  if (!verified) {
-    logger.warn({ tenantId, confidence }, 'LLM answer failed verification')
+  if (geminiResponse && !verified) {
+    logger.warn({ tenantId, confidence }, 'LLM answer failed citation verification — suppressing')
   }
 
   const answer = verified?.answer ?? null
@@ -127,7 +151,9 @@ export async function recall(
     'memory recall complete'
   )
 
-  return { ...result, queryId: saved.id }
+  const final = { ...result, queryId: saved.id }
+  queryResultCache.set(tenantId, question, final)
+  return final
 }
 
 // Backward compat alias — agent routes and old tests use this name

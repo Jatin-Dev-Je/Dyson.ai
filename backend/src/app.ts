@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import { env } from './config/env.js'
 import { db } from './infra/db/client.js'
 import { getRedisClient } from './infra/redis.js'
+import { geminiBreaker, cohereBreaker } from './infra/circuit-breaker.js'
 import { sql } from 'drizzle-orm'
 
 export async function buildApp() {
@@ -33,22 +34,26 @@ export async function buildApp() {
     methods:     ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 
-  // Global rate limit — individual routes override for stricter limits.
-  // Uses Redis when REDIS_URL is set (required in production for correct
-  // limiting across multiple Cloud Run replicas). Falls back to in-memory
-  // in dev when no Redis is configured.
+  // Global rate limit — per authenticated tenant, falling back to IP for
+  // unauthenticated requests. Uses Redis when REDIS_URL is set (required
+  // in production for correct limiting across multiple Cloud Run replicas).
   const redis = getRedisClient()
   await app.register(import('@fastify/rate-limit'), {
     max:        env.RATE_LIMIT_MAX_PER_MINUTE,
     timeWindow: '1 minute',
     ...(redis ? { redis } : {}),
-    keyGenerator: (req) => req.ip,
+    // Key by tenant when authenticated — fairer than per-IP in multi-tenant SaaS.
+    // A tenant behind a shared office IP won't be rate-limited by their colleagues.
+    keyGenerator: (req) => {
+      const user = req.user as { tid?: string } | undefined
+      return user?.tid ? `tenant:${user.tid}` : `ip:${req.ip}`
+    },
     errorResponseBuilder: () => ({
       error: { code: 'RATE_LIMITED', message: 'Too many requests — slow down' },
     }),
   })
   if (redis) {
-    app.log.info('rate limiting: Redis store active (distributed)')
+    app.log.info('rate limiting: Redis store active (distributed, per-tenant keying)')
   } else {
     app.log.warn('rate limiting: in-memory store (set REDIS_URL for distributed limiting in production)')
   }
@@ -141,6 +146,11 @@ export async function buildApp() {
       ingestion: {
         pending_1h: Number(ingestionStats?.pending ?? 0),
         failed_1h:  Number(ingestionStats?.failed ?? 0),
+      },
+      // Circuit breaker states — OPEN means that service is currently down
+      circuit_breakers: {
+        gemini: geminiBreaker.metrics,
+        cohere: cohereBreaker.metrics,
       },
     }
   })
