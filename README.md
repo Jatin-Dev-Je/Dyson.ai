@@ -1,396 +1,703 @@
 # Dyson
 
-> **The system of record for why.**
+> **The persistent memory layer for engineering teams.**
 
-Dyson is context infrastructure for modern companies. It connects the fragments of work scattered across Slack, GitHub, Notion, Linear, and meetings into a single, queryable graph — and explains the reasoning behind every decision, change, and outcome.
+Dyson ingests every decision, incident, and architectural choice from Slack, GitHub, Notion, and Linear — builds a causal knowledge graph from them — and lets your team and your AI agents ask *why* with a grounded, cited answer in seconds.
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Fastify](https://img.shields.io/badge/Fastify-5-000000?logo=fastify&logoColor=white)](https://fastify.dev/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Postgres](https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white)](https://supabase.com/)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-5B5BD6)](https://modelcontextprotocol.io/)
 
 ---
 
 ## Table of Contents
 
-- [The Thesis](#the-thesis)
-- [The Problem](#the-problem)
-- [The Solution](#the-solution)
-- [Core Features](#core-features)
-- [System Architecture](#system-architecture)
-- [Data Model](#data-model)
-- [AI / ML System](#ai--ml-system)
+- [Architecture](#architecture)
+- [Features](#features)
 - [Tech Stack](#tech-stack)
-- [Wedge: Engineering WHY](#wedge-engineering-why)
-- [Competitive Landscape](#competitive-landscape)
-- [Trust, Explainability & Safety](#trust-explainability--safety)
-- [Go-to-Market & Pricing](#go-to-market--pricing)
-- [Roadmap](#roadmap)
-- [Risks & Mitigations](#risks--mitigations)
-- [Long-Term Vision](#long-term-vision)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Database Schema](#database-schema)
+- [Backend Modules](#backend-modules)
+- [API Reference](#api-reference)
+- [MCP Server](#mcp-server)
+- [Frontend](#frontend)
+- [Deployment](#deployment)
 
 ---
 
-## The Thesis
+## Architecture
 
-By 2026, every team has an AI copilot — but copilots are only as smart as the context they can reach. The companies that win the next decade will be the ones whose institutional memory is structured, queryable, and trusted. Dyson is that layer.
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         External Sources                             │
+│          Slack ──── GitHub ──── Notion ──── Linear ──── Meetings    │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │  webhooks + OAuth backfill
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Ingestion Layer                                 │
+│   Raw event normalization → dedup (tenant_id, external_id, source)  │
+│   Idempotent writes to raw_events → enqueue processing job          │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │  Cloud Tasks (async)
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Processing Pipeline                              │
+│   Entity extraction → Decision detection → Cohere embeddings        │
+│   → context_nodes + causal_edges + node_embeddings (pgvector)       │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │
+           ┌───────────────┴───────────────┐
+           ▼                               ▼
+┌─────────────────────┐       ┌────────────────────────┐
+│   Context Graph      │       │   Semantic Search       │
+│   (nodes + edges)    │       │   (pgvector cosine)     │
+└──────────┬──────────┘       └───────────┬────────────┘
+           │                              │
+           └──────────────┬───────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Recall / WHY Engine                             │
+│   Hybrid retrieval → graph walk → confidence scoring                 │
+│   If confidence ≥ 0.72 → Gemini Flash composition + citations       │
+│   If confidence < 0.72 → return raw source nodes (no hallucination) │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+    REST API (humans)   MCP Server    Slack / GitHub bots
+    /api/v1/recall      /mcp          answer in-thread
+```
 
-| Metric | Value |
-|--------|-------|
-| Time engineers spend reconstructing context per week | 28% (McKinsey, 2024) |
-| Annual cost of context loss per 100-person company | ~$1.3M (Dyson estimate) |
-| Median time to find rationale behind a 6-month-old decision | 1 day |
-
-**AI agents are about to become coworkers. A coworker without context is useless. Dyson is the substrate that gives every human and every agent in your company the same grounded, citable understanding of why things are the way they are.**
+**Data flow in one sentence:** external events → normalized raw events → processed graph + embeddings → hybrid retrieval → cited WHY answers for humans and agents.
 
 ---
 
-## The Problem
+## Features
 
-Modern companies generate enormous amounts of structured signal — and almost none of it is connected. The cost is invisible until you measure it.
-
-### Where context lives today
-
-Work is fragmented across at least five surfaces, each owning only a slice of the story:
-
-| Surface | What it stores |
-|---------|---------------|
-| Slack / Teams | Real-time conversation, decisions made in threads |
-| GitHub / GitLab | Code, PRs, issues, the literal change |
-| Notion / Confluence | Long-form documentation and ADRs |
-| Linear / Jira / Asana | Task state and prioritization |
-| Zoom / Google Meet | Meetings where most decisions actually happen |
-
-### The four costs of fragmentation
-
-**Context loss** — Decisions made in Slack threads vanish from institutional memory within weeks. By the time the next engineer asks why, the people who knew have moved on.
-
-**No "why" layer** — Tools store outcomes (a merged PR, a closed ticket) but not reasoning. The chain — issue → discussion → decision → code → outcome — is never assembled.
-
-**Slow onboarding** — New hires take 3–6 months to become productive, with most of that time spent re-deriving knowledge that already exists in someone's DMs.
-
-**Agents fly blind** — AI copilots can read any single source — but no copilot can yet answer "what conversations led to this code being written?" without hallucinating.
-
-### Why this problem is now acute
-
-Three forces collided between 2024 and 2026 to make context the bottleneck:
-
-1. **Distributed-first work** moved decisions from whiteboards into chat, where they decay invisibly.
-2. **AI agents entered every workflow** — and revealed that retrieval without grounding produces confident nonsense.
-3. **The cost of code dropped sharply**, making the cost of *understanding* code the dominant constraint on engineering throughput.
-
----
-
-## The Solution
-
-Existing tools are systems of record for *what* happened. Slack records messages; GitHub records commits; Linear records tickets. None of them record the relationships between these events, and none of them record the reasoning that connects them.
-
-**Dyson is a system of record for context.**
-
-> **The core insight:** Causality is not a property of a single tool — it is a property of the graph between tools. Until that graph is built explicitly, no amount of better search or smarter LLMs solves the WHY problem.
-
-### What Dyson is
-
-- An **ingestion layer** that pulls events from Slack, GitHub, Notion, Linear, and meeting transcripts in real time.
-- A **processing pipeline** that extracts entities, decisions, and intents, and embeds every artifact for semantic retrieval.
-- A **context graph** that links People → Messages → Issues → PRs → Decisions → Outcomes with typed, time-stamped edges.
-- A **query engine** that combines structured graph traversal with semantic search and grounded LLM reasoning to answer WHY questions.
-- An **agent API** that exposes the same graph to AI agents, so any agent in your stack can act with full company context.
-
-### What Dyson is not
-
-- **Not enterprise search.** Search returns documents. Dyson returns explanations grounded in linked events.
-- **Not a chatbot.** Chatbots answer in isolation. Dyson answers from a structured graph it can show you.
-- **Not a replacement for Slack, GitHub, or Notion.** Dyson is the layer between them — it makes the existing stack legible.
-
----
-
-## Core Features
-
-### 1. Time-Travel WHY Engine
-Ask any "why" question in natural language. Dyson reconstructs a timeline of source events (messages, issues, PRs, meeting moments) and explains the causal chain. Every claim is cited; every citation is one click from the original artifact.
-
-**Example query:** *"Why did the auth refactor ship the way it did?"*
-
-```
-Mar 12 — #incidents thread: rate-limit bug reported
-Mar 13 — GitHub issue #4421 opened, linked to thread
-Mar 14 — RFC drafted in Notion (3 contributors)
-Mar 17 — design review meeting, decision: "swap to JWT, deprecate sessions"
-Mar 19 — PR #4502 merged (cites RFC and meeting)
-Mar 22 — deployment, no further incidents
-```
-*Every line is a clickable citation back to the source event.*
-
-### 2. Context Graph
-A typed, temporal graph of People, Messages, Documents, Code Changes, Decisions, and Tasks — connected by relationships such as `leads_to`, `depends_on`, `discussed_in`, and `decided_by`. The graph is the durable asset — it compounds in value over time.
-
-### 3. Universal Context Search
-Hybrid retrieval: structured graph traversal combined with dense vector search and BM25 ranking. Results carry provenance and confidence scores.
-
-### 4. Agent Context API
-An MCP-compatible endpoint that lets any AI agent — your code copilot, your support bot, your internal automation — query the same grounded context graph that humans use.
-
-### 5. Decision Tracking
-Decisions are first-class entities. Dyson detects them in conversation and meetings, links them to the artifacts that triggered them and the changes they produced, and surfaces a queryable Decision Log per team.
-
-### 6. Meeting Intelligence
-Meetings are transcribed, segmented by topic, and folded into the graph. Decisions and action items become nodes with edges to the relevant Slack threads and PRs.
-
-### 7. Developer Intelligence
-Explain a system, a service boundary, or the blast radius of a proposed change — grounded in commit history, ADRs, and recent incidents.
-
-### 8. Continuous Learning
-Every user interaction (citations clicked, answers rated, links accepted) improves linking and retrieval quality. The graph gets smarter with use.
-
----
-
-## System Architecture
-
-Modular monolith today, evolving to event-driven services as ingestion throughput crosses the **1M-events-per-tenant-per-day** threshold. Optimized for shipping speed now, with clean module boundaries that make later extraction cheap.
-
-### Data Flow
-
-```
-External tools → Ingestion → Processing → Graph + Embeddings → Query Engine → Humans & Agents
-```
-
-Each arrow is an **asynchronous, idempotent boundary**. Re-ingestion is safe and routine; the graph is always rebuildable from raw event logs.
-
-### Modules
-
-| Module | Responsibility |
-|--------|---------------|
-| **Ingestion** | Connectors for Slack, GitHub, Notion, Linear, Zoom, Google Meet. Webhook-first, with reconciling pollers. |
-| **Processing** | Entity extraction, intent classification, decision detection, embedding generation. |
-| **Context Graph** | Postgres + a graph layer for typed temporal edges. |
-| **Embedding Store** | FAISS for hot indexes, pgvector for tenant-scoped long-term storage. |
-| **Query Engine** | Hybrid retrieval, graph-walk planning, RAG with structured citations. |
-| **Agent Layer** | MCP-compatible API, OAuth-scoped, with per-tool rate limiting. |
-
----
-
-## Data Model
-
-### Entities
-
-```
-User
-Message
-Document
-Code Change
-Decision
-Task
-Meeting Moment
-```
-
-### Relationship Types
-
-```
-leads_to
-depends_on
-discussed_in
-decided_by
-resolves
-supersedes
-```
-
-### Graph Shape
-
-```
-User ──discussed_in──► Message ──leads_to──► Decision
-                          │                      │
-                     discussed_in            decided_by
-                          │                      │
-                          ▼                      ▼
-                       Meeting              Code Change
-                       Moment    ─resolves─►    (PR)
-                                                 │
-                                            depends_on
-                                                 │
-                                                 ▼
-                                              Task
-```
-
----
-
-## AI / ML System
-
-| Component | Description |
-|-----------|-------------|
-| **Embeddings** | Semantic retrieval with per-tenant fine-tuning over time |
-| **Entity & Decision Extraction** | Small distilled model on the hot path for entity recognition and decision detection |
-| **Cross-Source Linking** | The proprietary core — a model that scores the probability that event A caused event B, trained on labeled causal trajectories |
-| **Temporal Reasoning** | Explicit time-aware graph walks; the LLM is not trusted to keep dates straight |
-| **Causal RAG** | The LLM composes the explanation, but only over events the graph engine retrieved — no free generation |
+| Feature | Description |
+|---------|-------------|
+| **Memory Recall** | Ask anything about your codebase history; get a cited answer grounded in real source events |
+| **Context Graph** | Causal knowledge graph of decisions, incidents, and architectural choices |
+| **Decision Log** | Auto-detected decisions with confidence scores and source citations |
+| **Team Briefings** | AI-generated onboarding context packs for new engineers |
+| **MCP Server** | Native integration with Claude Desktop, Cursor, Continue, and any MCP-compatible agent |
+| **Agent API** | REST API for AI agents to read and write company memory |
+| **Multi-source Ingestion** | Slack, GitHub (PRs, issues, reviews), Notion, Linear — all normalized |
+| **Semantic Search** | Full-text + vector search across all company memories |
+| **Workspace Isolation** | Complete tenant isolation — every query scoped to your workspace |
+| **Audit Log** | Full trace of every recall, memory write, and agent action |
 
 ---
 
 ## Tech Stack
 
-### Backend
-- **Runtime:** Node.js + TypeScript
-
-### ML Services
-- **Framework:** Python + FastAPI
-- **Models:** HuggingFace, custom cross-source linkers
-
-### Data
-- **Primary DB:** Postgres + pgvector
-- **Hot vector index:** FAISS
-- **Raw event storage:** S3
-
-### Infrastructure
-- **Cloud:** Google Cloud
-- **Compute:** Cloud Run
-- **Messaging:** Pub/Sub + Cloud Tasks
-
----
-
-## Wedge: Engineering WHY
-
-We are not selling "context for everyone." We are selling a specific painful workflow first — and earning the right to expand from there.
-
-### First customer: 30–200-person engineering teams
-Series A to Series C software companies that are past the "everyone knows everything" stage but pre-platform-team scale.
-
-### Flagship workflows
-
-**Workflow A — Post-mortem reconstruction**
-An engineer asks why something shipped the way it did. Dyson returns a reconstructed causal timeline with citations back to the original Slack threads, GitHub issues, Notion docs, and meeting moments.
-
-**Workflow B — Onboarding context packs**
-A new hire joins a team. Dyson generates a personalized context pack: the key decisions that shaped the current architecture, the people who made them, the trade-offs considered and rejected, and open questions still on the team's plate.
-
-### Why these workflows
-- **Acute, recurring pain** — every team does post-mortems and onboards engineers, repeatedly.
-- **Bounded scope** — we do not need to know everything about your company to be useful here.
-- **Demoable in 10 minutes** — connect Slack + GitHub, ask one WHY question, see the value.
-- **Champion-shaped** — engineering managers feel this pain personally and have line-item budget for tooling.
+| Layer | Technology |
+|-------|-----------|
+| **Backend API** | Node.js 22, TypeScript 5.7, Fastify 5 |
+| **ORM / DB** | Drizzle ORM, PostgreSQL (Supabase), pgvector (1024-dim HNSW) |
+| **Embeddings** | Cohere embed-v3 (1024-dimensional) |
+| **LLM composition** | Google Gemini 1.5 Flash (temperature 0, structured JSON output) |
+| **Job queue** | Google Cloud Tasks (async ingestion + processing) |
+| **Event bus** | Google Cloud Pub/Sub |
+| **Raw event store** | Google Cloud Storage |
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, TanStack Query |
+| **Auth** | JWT (HS256, 15m access / 30d refresh) + HMAC refresh token lookup |
+| **Validation** | Zod at every external boundary |
+| **Logging** | Pino (structured JSON) + Sentry |
+| **MCP** | `@modelcontextprotocol/sdk` — Streamable HTTP + stdio bridge |
+| **Email** | Resend |
+| **Deployment** | Google Cloud Run (backend), Vercel (frontend) |
+| **CI/CD** | Google Cloud Build (`cloudbuild.yaml`) |
+| **Tests** | Vitest (unit + integration), 118+ passing |
 
 ---
 
-## Competitive Landscape
+## Project Structure
 
-| Player | What they do | Where Dyson differs |
-|--------|-------------|---------------------|
-| Glean / Microsoft Copilot | Federated enterprise search; LLM Q&A over indexed content | We build a typed causal graph, not just an index. Answers carry timelines and provenance, not summaries. |
-| Notion AI / Slack AI | AI inside a single surface | Single-tool AI cannot reconstruct cross-tool causality. Dyson connects what they each see in isolation. |
-| ChatGPT Enterprise + connectors | General-purpose assistant with read access to a few sources | We are infrastructure, not an assistant. We power assistants — including ChatGPT — with grounded context via the Agent API. |
-| Mem / Sana / Dust | Knowledge management for general teams | We are technical-team-first, with deep GitHub and meeting intelligence and a graph engineers can trust. |
-| DIY (RAG over Slack export) | Internal tools built on LangChain / vector DBs | Building this well takes 18+ months and an ML team. Dyson is the buy-vs-build answer. |
-
-### Durable moats
-
-1. **Graph compounding** — The longer Dyson runs in your company, the more valuable the graph becomes and the harder it is to rip out. Switching cost grows monotonically with usage.
-2. **Cross-source linking IP** — The hard problem is not retrieval — it is identifying which Slack thread caused which PR. We are building proprietary evaluation sets and linking models around this exact task.
-3. **Trust surface** — Citations + confidence + audit log. Once a team trusts Dyson for post-mortems, they trust it for performance reviews, planning, and agent automation.
-4. **Agent-native distribution** — As AI agents proliferate, the company that owns the context endpoint they all call becomes the default integration. MCP positions us for this directly.
-
----
-
-## Trust, Explainability & Safety
-
-A WHY engine that hallucinates is worse than no WHY engine at all. One confidently wrong post-mortem destroys the trust that justifies the product. **Trust is not a feature — it is the entire game.**
-
-### Five trust mechanisms baked into the product
-
-1. **Citations on every claim** — No sentence is generated without an attached source event. Uncited claims are suppressed by the response policy.
-2. **Confidence scoring** — Every causal link carries a calibrated confidence. Below threshold, Dyson says "I don't know" or returns the underlying events without an interpretation.
-3. **Reversible conclusions** — Users can mark a link as wrong; the correction feeds the linking model and is logged in the audit trail.
-4. **Human-in-the-loop on high-stakes outputs** — Decision logs and post-mortems include a one-click "verify with author" flow.
-5. **Source-faithful redaction** — If a user does not have access to a source channel, Dyson returns no claim derived from it — full stop, with no leakage via summary.
-
-### Privacy & access controls
-
-- **Permission-aware ingestion:** Dyson never sees what the requesting user cannot see.
-- **Tenant isolation** at the database, embedding store, and graph layer.
-- **Customer-controlled redaction rules** for sensitive channels (HR, legal, security).
-- **SOC 2 Type II** target by Q4 2026; HIPAA path on enterprise tier.
-
----
-
-## Go-to-Market & Pricing
-
-### Ideal customer profile
-
-- **Stage:** Series A to Series C, 30–200 engineers
-- **Stack:** Slack + GitHub at minimum; bonus for Notion and Linear
-- **Pain trigger:** Recent painful onboarding, a post-mortem with missing context, or an exec asking "why did we build this?"
-- **Champion:** Head of Engineering, VP Eng, or Eng Ops lead
-
-### GTM motion
-
-1. **Slack-first install** — three-click connect, value visible in <1 hour
-2. **Bottoms-up:** free for the first 5 seats and 90 days of history
-3. **Land** on the WHY engine for one team; **expand** to org-wide context and the Agent API as adjacent teams pull it in
-4. **Content engine** — public post-mortem teardowns, eng-leader podcast tour, conference talks on "agent-grade context"
-5. **Design partners first:** 8–12 hand-picked teams, weekly feedback loops, co-published case studies in Q3 2026
-
-### Pricing
-
-| Tier | Limits | Price |
-|------|--------|-------|
-| **Free** | Up to 5 users, 90 days of history, Slack + GitHub only | $0 |
-| **Team** | Up to 50 users, full history, all connectors, Decision Log, Agent API (read) | $25 / user / month |
-| **Business** | Unlimited users, SOC 2, custom retention, SSO, audit log, priority support | $45 / user / month |
-| **Enterprise** | VPC option, custom DPA, HIPAA path, dedicated success | Custom |
-
-### Success metrics (12-month targets)
-
-| Metric | Target |
-|--------|--------|
-| North-star: Cited Answers per Active User per Week | Measures real, grounded usage |
-| Activation: teams asking 5+ WHY questions in week one | 70% |
-| Retention: net dollar retention by month 12 on Team plan | >120% |
-| Trust: cited answers flagged as incorrect | <3% |
-| Trust: citation click-through rate | >90% |
+```
+dyson/
+├── backend/                      Node.js API server + MCP
+│   ├── src/
+│   │   ├── app.ts                Fastify app factory, route registration
+│   │   ├── server.ts             HTTP entry point
+│   │   ├── config/
+│   │   │   ├── env.ts            Zod-validated env (fails fast in prod)
+│   │   │   └── constants.ts      Domain constants
+│   │   ├── infra/
+│   │   │   ├── db/               Drizzle client, schemas, migrations
+│   │   │   ├── queue/            Cloud Tasks dispatcher
+│   │   │   ├── email.ts          Resend email provider
+│   │   │   ├── cache.ts          Caching layer
+│   │   │   └── retry.ts          Retry utilities
+│   │   ├── modules/
+│   │   │   ├── auth/             JWT auth, sessions, password reset
+│   │   │   ├── workspace/        Workspace management
+│   │   │   ├── users/            Users, invitations, roles
+│   │   │   ├── connectors/       OAuth for Slack + GitHub
+│   │   │   ├── ingestion/        Event normalization, dedup
+│   │   │   ├── processing/       Entity extraction, embeddings, edges
+│   │   │   ├── graph/            Context graph queries
+│   │   │   ├── decisions/        Decision detection + log
+│   │   │   ├── why/              WHY Engine (recall + composition)
+│   │   │   ├── memory/           Memory CRUD + retrieval
+│   │   │   ├── search/           Full-text + semantic search
+│   │   │   ├── onboarding-packs/ Generated context packs
+│   │   │   ├── api-keys/         Scoped agent API keys
+│   │   │   ├── agent/            REST agent API
+│   │   │   ├── agent-layer/mcp/  MCP server, HTTP transport, stdio
+│   │   │   ├── audit/            Audit log
+│   │   │   ├── slack-bot/        Slack App integration
+│   │   │   └── github-bot/       GitHub App integration
+│   │   ├── api/
+│   │   │   ├── middleware/       Auth, RBAC, signature verification
+│   │   │   └── routes/
+│   │   │       ├── webhooks/     Slack + GitHub webhook receivers
+│   │   │       ├── jobs.routes.ts Cloud Tasks job handlers
+│   │   │       └── v1/           Versioned REST endpoints
+│   │   └── shared/
+│   │       ├── errors.ts         Custom error hierarchy
+│   │       └── types/            Shared TypeScript types
+│   ├── tests/                    Vitest unit + integration tests
+│   ├── tsconfig.json             NodeNext module resolution
+│   └── package.json
+│
+├── frontend/                     React + Vite web app
+│   ├── src/
+│   │   ├── App.tsx               React Router tree
+│   │   ├── pages/
+│   │   │   ├── auth/             Login, Signup, Password reset, Accept invite
+│   │   │   ├── onboarding/       New user onboarding flow
+│   │   │   ├── app/              Dashboard, Recall, Memory Graph, Search, Packs
+│   │   │   └── settings/         Profile, Workspace, Sources, Members, Billing…
+│   │   ├── components/
+│   │   │   ├── layout/           AppShell (collapsible sidebar), ProtectedRoute
+│   │   │   └── shared/           SourcePill, ConfidenceBadge, DysonMark, OAuthButton
+│   │   └── lib/
+│   │       ├── api.ts            Typed fetch client with auto-refresh
+│   │       └── auth.ts           Auth state (localStorage shim)
+│   ├── tailwind.config.ts        Design tokens (canvas, ink, primary…)
+│   └── package.json
+│
+├── docs/
+│   └── DEPLOYMENT.md             Full Cloud Run + Supabase runbook
+├── CLAUDE.md                     Engineering guide for contributors
+└── cloudbuild.yaml               Google Cloud Build CI/CD
+```
 
 ---
 
-## Roadmap
+## Quick Start
 
-### Phase 1 — Wedge (Q2–Q3 2026)
-- Slack + GitHub connectors
-- WHY Engine (core product)
-- Post-mortem and onboarding workflows
-- 8–12 design partners
-- Public eval suite
+### Prerequisites
 
-### Phase 2 — Graph (Q4 2026 – Q1 2027)
-- Notion + Linear + meetings ingestion
-- Cross-source causal linking v2
-- Decision Log GA
-- Self-serve Team plan
-- SOC 2 Type II
+- Node.js 22+
+- A [Supabase](https://supabase.com) project (free tier works)
+- `pgvector` enabled on your Supabase DB
 
-### Phase 3 — Agents (2027)
-- Public Agent Context API
-- MCP server in production
-- Partnerships with code copilots and support agents
-- Enterprise tier with VPC
+### 1. Clone and install
 
-### Phase 4 — OS (2028+)
-Dyson becomes the default context endpoint for AI-native companies — the layer every human and every agent calls before acting.
+```bash
+git clone https://github.com/Jatin-Dev-Je/Dyson.ai.git
+cd Dyson.ai
+
+# Backend
+cd backend && npm install
+
+# Frontend
+cd ../frontend && npm install
+```
+
+### 2. Enable pgvector
+
+Run in the Supabase SQL Editor:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+### 3. Configure environment
+
+```bash
+cp backend/.env.example backend/.env
+# Fill in the required values (see Environment Variables below)
+```
+
+Minimum required for local dev:
+
+```env
+DATABASE_URL=postgres://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+DATABASE_URL_POOLED=postgres://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
+JWT_SECRET=<at-least-32-random-characters>
+```
+
+### 4. Run migrations
+
+```bash
+cd backend
+npm run db:migrate
+```
+
+### 5. Start dev servers
+
+```bash
+# Backend (port 8080)
+cd backend && npm run dev
+
+# Frontend (port 3000)
+cd frontend && npm run dev
+```
+
+Open `http://localhost:3000` — sign up, create a workspace, connect Slack or GitHub.
 
 ---
 
-## Risks & Mitigations
+## Environment Variables
 
-| Risk | Description | Mitigation |
-|------|-------------|------------|
-| **Hallucination** | A confidently wrong WHY answer destroys trust permanently | Citations enforced by response policy; calibrated confidence; "I don't know" is a first-class output |
-| **Crowded space** | Glean, Notion AI, Slack AI all overlap our demo surface | Engineering-team wedge with deep code+meeting linking; we are infrastructure, not a chat app — sold accordingly |
-| **Privacy** | Cross-source ingestion looks scary to security teams | Permission-aware retrieval, tenant isolation, customer-controlled redaction, SOC 2, optional VPC deployment |
-| **Linking quality** | Wrong edges in the graph poison every downstream answer | Public eval set; user-correctable links; threshold-gated edge publication; continuous active learning |
-| **Name collision** | "Dyson" overlaps a major consumer brand, complicating SEO and trademark | Trademark cleared in B2B SaaS class; rebrand reserved as a Series A option if growth demands it |
+All variables are Zod-validated at startup. The server refuses to boot on missing required values or insecure defaults in production.
+
+### Required (all environments)
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Postgres direct connection (port 5432) — used for migrations |
+| `DATABASE_URL_POOLED` | Pooled connection (port 6543 via Supabase) — used for all queries |
+| `JWT_SECRET` | ≥32 chars in dev, ≥48 chars in prod. Must not be a known test value |
+
+### Database (Supabase)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SUPABASE_URL` | — | Supabase project URL (`https://<ref>.supabase.co`) |
+| `SUPABASE_ANON_KEY` | — | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | — | Supabase service role key (admin operations) |
+
+### Application
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NODE_ENV` | — | `development` · `test` · `production` |
+| `PORT` | `8080` | HTTP server port |
+| `APP_URL` | `http://localhost:3000` | Frontend base URL (used in email links) |
+| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed CORS origins |
+| `LOG_LEVEL` | `info` | Pino log level |
+| `SWAGGER_ENABLED` | `true` | Disable in production |
+
+### Auth
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JWT_ACCESS_TOKEN_EXPIRES_IN` | `15m` | Access token lifetime |
+| `JWT_REFRESH_TOKEN_EXPIRES_IN` | `30d` | Refresh token lifetime |
+
+### AI / ML (required in production)
+
+| Variable | Description |
+|----------|-------------|
+| `GEMINI_API_KEY` | Google Gemini API key — used for WHY Engine composition |
+| `GEMINI_MODEL` | `gemini-1.5-flash-latest` — LLM model |
+| `COHERE_API_KEY` | Cohere API key — used for 1024-dim embed-v3 embeddings |
+
+### Slack (required for Slack connector)
+
+| Variable | Description |
+|----------|-------------|
+| `SLACK_BOT_TOKEN` | Bot token (`xoxb-...`) |
+| `SLACK_SIGNING_SECRET` | Webhook signature verification |
+| `SLACK_APP_TOKEN` | Socket mode token (`xapp-...`) |
+| `SLACK_CLIENT_ID` | OAuth client ID |
+| `SLACK_CLIENT_SECRET` | OAuth client secret |
+
+### GitHub (required for GitHub connector)
+
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_APP_ID` | GitHub App ID |
+| `GITHUB_APP_PRIVATE_KEY` | GitHub App private key (PEM) |
+| `GITHUB_WEBHOOK_SECRET` | Webhook HMAC signing secret |
+| `GITHUB_CLIENT_ID` | OAuth client ID |
+| `GITHUB_CLIENT_SECRET` | OAuth client secret |
+
+### Google Cloud (required in production)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GCP_PROJECT_ID` | — | Google Cloud project ID |
+| `GCP_REGION` | `us-central1` | Cloud region |
+| `GOOGLE_APPLICATION_CREDENTIALS` | — | Path to service account JSON |
+| `GCS_BUCKET_NAME` | `dyson-raw-events` | Raw event archive bucket |
+| `CLOUD_TASKS_QUEUE_NAME` | `dyson-ingestion` | Cloud Tasks queue |
+| `CLOUD_TASKS_LOCATION` | `us-central1` | Queue location |
+| `CLOUD_TASKS_HANDLER_URL` | `http://localhost:8080/jobs` | Job handler endpoint |
+| `PUBSUB_TOPIC_INGESTION` | `dyson-ingestion-events` | Ingestion Pub/Sub topic |
+| `PUBSUB_TOPIC_PROCESSING` | `dyson-processing-events` | Processing topic |
+
+### Rate Limiting
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATE_LIMIT_MAX_PER_MINUTE` | `100` | Global per-IP rate limit |
+| `WHY_ENGINE_RATE_LIMIT_MAX_PER_MINUTE` | `10` | Recall/WHY per-user rate limit |
+
+### Jobs & Email
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JOB_SECRET` | (dev default) | Cloud Tasks auth secret for `/jobs` endpoint — ≥16 chars |
+| `RESEND_API_KEY` | — | Resend API key (required for email in prod) |
+| `RESEND_FROM_EMAIL` | `Dyson <noreply@dyson.ai>` | From address |
+
+### Observability
+
+| Variable | Description |
+|----------|-------------|
+| `SENTRY_DSN` | Sentry DSN for error tracking |
 
 ---
 
-## Long-Term Vision
+## Database Schema
 
-Every company in five years will run on a hybrid workforce of humans and agents. Both will be useless without grounded, structured, auditable context. Dyson is building that layer — the one neither incumbents nor general-purpose assistants are positioned to own.
+9 core tables across 5 schema files. All tenant-scoped tables include `tenant_id` and filter by it on every query — missing tenant scope is treated as a security bug.
 
-> Slack is chat. GitHub is code. Notion is docs. Linear is tasks.
-> **Dyson is the layer that explains why any of it happened — to anyone, human or agent, who needs to know.**
+```
+tenants              workspaces (one per company)
+users                team members, roles, email verification
+refresh_tokens       hashed session tokens (HMAC-SHA256, O(1) lookup)
+invitations          team invite tokens with expiry + RBAC role
+connected_sources    OAuth integrations (Slack, GitHub…) per workspace
+
+raw_events           normalized ingested events (idempotent on tenant+external_id+source)
+context_nodes        extracted entities: decisions, incidents, PRs, messages
+causal_edges         relationships between nodes (depends-on, causes, resolves…)
+node_embeddings      1024-dim Cohere vectors; HNSW index for ANN search
+
+why_queries          WHY Engine query history with confidence, citations, feedback
+onboarding_packs     generated context packs (sections JSON, linked node IDs)
+api_keys             scoped agent API keys (hashed, prefix-indexed)
+audit_log            immutable action trail (actor, action, resource, IP, timestamp)
+```
+
+### Key constraints
+
+- `raw_events` → unique on `(tenant_id, external_id, source)` — ingestion is idempotent
+- `context_nodes` → unique on `(tenant_id, external_id, source)` — no duplicate nodes
+- `causal_edges` → unique on `(source_node_id, target_node_id, relationship_type)`
+- `node_embeddings` → HNSW index (`lists=100, ef_construction=200`) for sub-10ms ANN
+- Vector search always joins through tenant-scoped nodes before similarity ranking
 
 ---
 
-**Others store what. Dyson explains why.**
+## Backend Modules
 
-We are building the context infrastructure that human teams and AI agents alike will depend on to act with judgment instead of guesswork. Start with engineering post-mortems. End as the system of record every company runs on.
+| Module | Route prefix | Responsibility |
+|--------|-------------|----------------|
+| **auth** | `/api/v1/auth` | Signup, login, refresh, logout, password reset, email verification, session management |
+| **workspace** | `/api/v1/workspaces` | Workspace profile, plan, settings |
+| **users** | `/api/v1/users` | Current user, team list, invitations, role management |
+| **connectors** | `/api/v1/connectors` | OAuth setup + callback for Slack and GitHub; trigger backfill |
+| **ingestion** | (internal) | Normalise Slack messages and GitHub events; write to `raw_events` |
+| **processing** | (job handler) | Entity extraction, decision detection, Cohere embeddings, causal edge building |
+| **graph** | `/api/v1/graph` | Read context nodes, edges, timeline queries |
+| **decisions** | `/api/v1/decisions` | List and detail auto-detected decisions |
+| **why** | `/api/v1/recall` | WHY Engine: hybrid retrieval → confidence gate → Gemini composition |
+| **memory** | `/api/v1/memory` | Direct memory CRUD + agent writes |
+| **search** | `/api/v1/search` | Full-text + semantic context search |
+| **onboarding-packs** | `/api/v1/onboarding-packs` | Generate and retrieve team context packs |
+| **api-keys** | `/api/v1/api-keys` | Create, list, revoke scoped API keys |
+| **agent** | `/api/v1/agent` | REST API surface for external AI agents |
+| **agent-layer/mcp** | `/mcp` | MCP Streamable HTTP transport + stdio bridge |
+| **audit** | `/api/v1/audit-log` | Read workspace audit trail |
+| **slack-bot** | (internal) | Answer queries in Slack, link threads to memory nodes |
+| **github-bot** | (internal) | Annotate PRs with related decisions, comment on incidents |
+| **webhooks** | `/webhooks` | Receive and verify Slack + GitHub push events |
+| **jobs** | `/jobs` | Cloud Tasks job handlers (signed with `JOB_SECRET`) |
+
+---
+
+## API Reference
+
+All endpoints return:
+
+```jsonc
+// Success
+{ "data": <T>, "meta": { "cursor"?: string, "confidence"?: number } }
+
+// Error
+{ "error": { "code": "SNAKE_CASE_CODE", "message": "Human readable" } }
+```
+
+### Auth (`/api/v1/auth`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/signup` | — | Create account + workspace |
+| `POST` | `/login` | — | Email + password login, returns JWT pair |
+| `POST` | `/refresh` | — | Rotate access token using refresh token |
+| `POST` | `/logout` | JWT | Revoke current refresh token |
+| `GET` | `/me` | JWT | Current user + workspace |
+| `POST` | `/forgot-password` | — | Send reset email (stateless HMAC token) |
+| `POST` | `/reset-password` | — | Consume reset token, set new password |
+| `GET` | `/verify-email` | — | Confirm email with HMAC token |
+| `POST` | `/resend-verification` | JWT | Re-send verification email |
+| `POST` | `/change-password` | JWT | Change password (invalidates other sessions) |
+| `GET` | `/invite/:token` | — | Preview invite details |
+| `POST` | `/accept-invite` | — | Accept invite, create account |
+| `GET` | `/sessions` | JWT | List active sessions |
+| `DELETE` | `/sessions/:id` | JWT | Revoke a session |
+| `DELETE` | `/sessions` | JWT | Revoke all sessions (sign out everywhere) |
+
+### Recall / WHY Engine (`/api/v1/recall`)
+
+Rate limited: **10 requests / minute / user**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/` | Ask a question. Returns answer + citations + confidence. `cannotAnswer: true` when confidence < 0.72 |
+| `GET` | `/history` | Paginated query history (cursor-based) |
+| `GET` | `/:id` | Retrieve a specific query result |
+| `PATCH` | `/:id/feedback` | Submit helpfulness score (`-1` or `1`) |
+
+**Response shape:**
+
+```jsonc
+{
+  "data": {
+    "queryId": "rec_01j...",
+    "question": "Why did we choose pgvector?",
+    "answer": "The team chose pgvector in April 2025 because...",  // null if cannotAnswer
+    "confidence": 0.91,
+    "cannotAnswer": false,
+    "citations": [
+      {
+        "claim": "pgvector was chosen for cost reasons",
+        "sourceNodeId": "node_01j...",
+        "sourceUrl": "https://slack.com/archives/...",
+        "confidence": 0.88
+      }
+    ],
+    "sourceNodes": [...]
+  },
+  "meta": { "confidence": 0.91, "cannotAnswer": false, "citationsCount": 3 }
+}
+```
+
+### Memory (`/api/v1/memory`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/` | Create a memory node (with immediate embedding) |
+| `GET` | `/` | List memories (paginated, filterable by type) |
+| `GET` | `/:id` | Get a single memory with linked nodes |
+| `POST` | `/:id/link` | Create a causal edge between two memory nodes |
+| `POST` | `/agent` | Agent-authenticated write (API key scope: `write`) |
+
+### Graph (`/api/v1/graph`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/nodes` | List context nodes (filterable by type, source, date) |
+| `GET` | `/nodes/:id` | Node detail with incoming + outgoing edges |
+| `GET` | `/edges` | List causal edges |
+| `GET` | `/timeline` | Chronological event timeline |
+
+### Connectors (`/api/v1/connectors`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | List connected sources for workspace |
+| `GET` | `/slack/oauth` | Initiate Slack OAuth (signed state) |
+| `GET` | `/slack/callback` | Slack OAuth callback |
+| `POST` | `/slack/sync` | Trigger Slack backfill |
+| `GET` | `/github/oauth` | Initiate GitHub OAuth |
+| `GET` | `/github/callback` | GitHub OAuth callback |
+| `POST` | `/github/sync` | Trigger GitHub backfill |
+
+### Other endpoints
+
+| Prefix | Description |
+|--------|-------------|
+| `/api/v1/decisions` | Decision log (list, detail, timeline) |
+| `/api/v1/search` | Full-text + semantic search |
+| `/api/v1/onboarding-packs` | Generate and retrieve onboarding packs |
+| `/api/v1/api-keys` | API key CRUD (admin only) |
+| `/api/v1/users` | Users + invitations |
+| `/api/v1/workspaces` | Workspace settings |
+| `/api/v1/audit-log` | Audit trail |
+| `/api/v1/agent` | Agent REST API |
+| `/webhooks/slack` | Slack Events API |
+| `/webhooks/github` | GitHub webhook |
+| `/jobs` | Cloud Tasks job handlers (signed) |
+| `/health` | Liveness probe |
+| `/health/ready` | Readiness probe (SELECT 1) |
+| `/metrics` | 24h WHY stats + ingestion lag |
+| `/mcp` | MCP Streamable HTTP |
+
+---
+
+## MCP Server
+
+Dyson ships a native [Model Context Protocol](https://modelcontextprotocol.io/) server. Any MCP-compatible agent (Claude Desktop, Cursor, Continue, custom) can connect and read or write company memory.
+
+### Tools
+
+| Tool | Description |
+|------|-------------|
+| **`recall(question)`** | Ask anything about company history. Returns grounded answer + citations. If confidence < 0.72, returns raw source nodes instead of composing a narrative. |
+| **`remember(title, content, type?, url?, metadata?)`** | Write a new memory (decision, incident, standard, context, constraint, outcome). Immediately searchable. |
+| **`search_memory(query, type?, limit?)`** | Full-text + semantic search. Returns id, type, title, summary, source, confidence. |
+| **`recent_memories(limit?, type?, minConfidence?)`** | Browse recent company memories. Useful at session start for situational awareness. |
+| **`getMemory(id)`** | Read a full memory node with all linked memories and their relationship types. |
+| **`workspace_context()`** | Full workspace snapshot: recent memories, recent recalls, graph stats. Call once at session start. |
+
+### Agent prompts
+
+Three role-specific system prompt templates are available via MCP:
+
+| Prompt | Use case |
+|--------|----------|
+| `coding-agent` | Look up decisions before changing architecture; record new decisions after |
+| `sre-agent` | Incident response, pattern matching against past incidents, post-mortem creation |
+| `onboarding-agent` | New engineer ramp-up — pull relevant decisions, standards, and constraints |
+
+### Connect (Streamable HTTP)
+
+```
+POST https://<your-api-url>/mcp
+Authorization: Bearer dys_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Content-Type: application/json
+```
+
+### Connect (stdio — Claude Desktop / Cursor)
+
+Add to `claude_desktop_config.json` or `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "dyson": {
+      "command": "node",
+      "args": ["/path/to/backend/dist/modules/agent-layer/mcp/stdio.js"],
+      "env": {
+        "DYSON_API_URL": "https://your-api.run.app",
+        "DYSON_API_KEY": "dys_xxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Frontend
+
+### Routes
+
+| Path | Description |
+|------|-------------|
+| `/login` | Sign in |
+| `/signup` | Create account + workspace (2-step) |
+| `/forgot-password` | Request password reset |
+| `/reset-password` | Confirm new password |
+| `/accept-invite` | Accept team invitation |
+| `/app` | Dashboard — greeting, recall box, stats, recent memories, activity feed |
+| `/app/recall` | WHY Engine interface — ask questions, view confidence + citations |
+| `/app/decisions` | Memory Graph — decision log with causal edges |
+| `/app/onboarding-packs` | Team briefings — generated context packs |
+| `/app/search` | Global search across all memories |
+| `/app/settings/*` | Settings modal — Profile, Workspace, Sources, Members, Billing, API Keys, Audit, Security |
+
+### Design system
+
+- **Canvas:** `#FAFAF8` / **Surface:** `white` / **Border:** `#E8E7E5`
+- **Primary:** `#5B5BD6` (indigo) / **Danger:** `#DC2626`
+- **Font:** Geist Variable, 13–14px base, `letter-spacing: -0.01em`
+- Collapsible sidebar (240px ↔ 56px), settings open as full-screen modal overlay
+- Components: Radix UI primitives, Framer Motion, Lucide icons, Sonner toasts
+
+---
+
+## Deployment
+
+Full runbook: **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**
+
+### Summary
+
+| Service | Platform |
+|---------|----------|
+| Backend API + MCP | Google Cloud Run |
+| Job queue | Google Cloud Tasks |
+| Event bus | Google Cloud Pub/Sub |
+| Raw event archive | Google Cloud Storage |
+| Database | Supabase (Postgres + pgvector) |
+| Secrets | Google Secret Manager |
+| Frontend | Vercel |
+| CI/CD | Google Cloud Build |
+
+### Health checks
+
+```bash
+curl https://<api-url>/health        # liveness
+curl https://<api-url>/health/ready  # readiness (DB ping)
+```
+
+### Key operational notes
+
+- `--min-instances=1` on Cloud Run to avoid cold starts on the API
+- Migrations are forward-only and additive — never drop columns in the same migration that removes the code reference
+- Audit log writes are fire-and-forget; they never block the request path
+- Estimated cost at 100 active tenants: ~$400/month (Cloud Run + Supabase Pro + Gemini + Cohere)
+
+---
+
+## WHY Engine Contract
+
+The WHY Engine will say **"I don't know"** rather than hallucinate.
+
+```typescript
+type WhyEngineResult = {
+  queryId:      string
+  question:     string
+  answer:       string | null    // null when cannotAnswer is true
+  citations:    Citation[]       // every factual claim cites a source node
+  sourceNodes:  SourceNode[]     // raw evidence always returned
+  confidence:   number           // 0–1
+  cannotAnswer: boolean          // true when confidence < 0.72
+  latencyMs:    number
+}
+```
+
+- If `confidence < 0.72` → `cannotAnswer: true`, no LLM composition, raw nodes returned
+- If LLM returns claims without valid citations → answer is rejected
+- Every citation maps back to a real `context_node` with a `sourceUrl`
+- All queries are logged with confidence score for observability
+
+---
+
+## Contributing
+
+1. Read [`CLAUDE.md`](./CLAUDE.md) — engineering principles, module conventions, security rules
+2. One logical change per PR; keep diffs small
+3. Tenant isolation is mandatory — every query must include `tenant_id` filtering
+4. External boundaries (request bodies, webhooks, LLM output) must use Zod
+5. Do not log: query text, source content, tokens, passwords, emails
+
+```bash
+# Type check
+cd backend && npm run typecheck
+cd frontend && npm run typecheck     # or: npx tsc --noEmit
+
+# Tests
+cd backend && npm test
+
+# Lint + format
+cd backend && npm run lint && npm run format
+```
+
+---
+
+*Built with TypeScript, Fastify, React, pgvector, Gemini, and the MCP protocol.*
