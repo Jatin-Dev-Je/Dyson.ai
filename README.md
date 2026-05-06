@@ -359,12 +359,20 @@ All variables are Zod-validated at startup. The server refuses to boot on missin
 | `PUBSUB_TOPIC_INGESTION` | `dyson-ingestion-events` | Ingestion Pub/Sub topic |
 | `PUBSUB_TOPIC_PROCESSING` | `dyson-processing-events` | Processing topic |
 
+### Redis (required in production)
+
+| Variable | Description |
+|----------|-------------|
+| `REDIS_URL` | Redis connection URL — `rediss://default:<token>@<host>.upstash.io:6380` for Upstash. Required in production for distributed rate limiting across Cloud Run replicas. Falls back to per-instance in-memory limiting in dev. |
+
+Recommended provider: **[Upstash Redis](https://upstash.com)** (serverless, pay-per-request, works without a VPC connector on Cloud Run).
+
 ### Rate Limiting
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `RATE_LIMIT_MAX_PER_MINUTE` | `100` | Global per-IP rate limit |
-| `WHY_ENGINE_RATE_LIMIT_MAX_PER_MINUTE` | `10` | Recall/WHY per-user rate limit |
+| `WHY_ENGINE_RATE_LIMIT_MAX_PER_MINUTE` | `10` | Recall/WHY per-user rate limit (per-user key: `recall:{tenantId}:{userId}`) |
 
 ### Jobs & Email
 

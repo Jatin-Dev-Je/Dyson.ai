@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node'
 import { buildApp } from './app.js'
 import { env } from './config/env.js'
+import { closeRedisClient } from './infra/redis.js'
 
 // Initialise Sentry before anything else so uncaught exceptions are captured.
 // Disabled in test and when no DSN is configured.
@@ -35,6 +36,7 @@ async function start() {
       app.log.info({ signal }, 'Received shutdown signal — draining')
       try {
         await Sentry.flush(2000)   // flush pending events before shutdown
+        await closeRedisClient()   // gracefully close Redis connection
         await app.close()
         process.exit(0)
       } catch (err) {

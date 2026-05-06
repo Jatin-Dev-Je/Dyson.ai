@@ -51,6 +51,12 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-1.5-flash-latest'),
 
+  // ── Redis — distributed rate limiting ────────────────────────────────────
+  // Optional in dev (falls back to in-memory per-instance limiting).
+  // Required in production for correct rate limiting across multiple Cloud
+  // Run instances. Use Upstash Redis: rediss://default:<token>@<host>.upstash.io:6380
+  REDIS_URL: z.string().url().optional(),
+
   // ── Rate limiting ─────────────────────────────────────────────────────────
   RATE_LIMIT_MAX_PER_MINUTE: z.coerce.number().default(100),
   WHY_ENGINE_RATE_LIMIT_MAX_PER_MINUTE: z.coerce.number().default(10),
@@ -112,6 +118,9 @@ function assertProductionInvariants(env: z.infer<typeof EnvSchema>): string[] {
   }
   if (!env.COHERE_API_KEY) {
     errors.push('COHERE_API_KEY required in production (vector search cannot operate without embeddings)')
+  }
+  if (!env.REDIS_URL) {
+    errors.push('REDIS_URL required in production — without it rate limits are per-instance only and bypass on multi-replica deployments (use Upstash Redis)')
   }
   return errors
 }

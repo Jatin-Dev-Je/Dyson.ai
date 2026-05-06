@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import { env } from './config/env.js'
 import { db } from './infra/db/client.js'
+import { getRedisClient } from './infra/redis.js'
 import { sql } from 'drizzle-orm'
 
 export async function buildApp() {
@@ -32,14 +33,25 @@ export async function buildApp() {
     methods:     ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 
-  // Global rate limit — individual routes override for stricter limits
+  // Global rate limit — individual routes override for stricter limits.
+  // Uses Redis when REDIS_URL is set (required in production for correct
+  // limiting across multiple Cloud Run replicas). Falls back to in-memory
+  // in dev when no Redis is configured.
+  const redis = getRedisClient()
   await app.register(import('@fastify/rate-limit'), {
     max:        env.RATE_LIMIT_MAX_PER_MINUTE,
     timeWindow: '1 minute',
+    ...(redis ? { redis } : {}),
+    keyGenerator: (req) => req.ip,
     errorResponseBuilder: () => ({
       error: { code: 'RATE_LIMITED', message: 'Too many requests — slow down' },
     }),
   })
+  if (redis) {
+    app.log.info('rate limiting: Redis store active (distributed)')
+  } else {
+    app.log.warn('rate limiting: in-memory store (set REDIS_URL for distributed limiting in production)')
+  }
 
   await app.register(import('@fastify/formbody'))
 
