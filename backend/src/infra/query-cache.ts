@@ -51,7 +51,7 @@ export const queryResultCache = {
   },
 
   /** Invalidate when new memories are written to this tenant's graph. */
-  invalidateTenant(tenantId: string): void {
+  invalidateTenant(_tenantId: string): void {
     // TtlCache doesn't support prefix deletion — purge expired entries
     // and accept that new memories may briefly return stale answers.
     // At 5-minute TTL this is acceptable; at 30s TTL it's not.

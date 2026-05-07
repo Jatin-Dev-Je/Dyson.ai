@@ -18,6 +18,7 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_TOKEN_EXPIRES_IN: z.string().default('30d'),
+  CONNECTOR_TOKEN_ENCRYPTION_KEY: z.string().optional(),
 
   // ── Slack ─────────────────────────────────────────────────────────────────
   SLACK_BOT_TOKEN: z.string().startsWith('xoxb-').optional(),
@@ -107,6 +108,9 @@ function assertProductionInvariants(env: z.infer<typeof EnvSchema>): string[] {
   }
   if (env.JWT_SECRET.length < 48) {
     errors.push('JWT_SECRET must be ≥48 chars in production (`openssl rand -base64 64`)')
+  }
+  if (!env.CONNECTOR_TOKEN_ENCRYPTION_KEY) {
+    errors.push('CONNECTOR_TOKEN_ENCRYPTION_KEY required in production (`openssl rand -base64 32`)')
   }
   if (env.SWAGGER_ENABLED) {
     errors.push('SWAGGER_ENABLED must be false in production (do not expose API docs publicly)')

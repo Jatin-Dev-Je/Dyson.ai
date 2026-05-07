@@ -24,7 +24,7 @@
  *   Content-Type: application/json
  */
 
-import type { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify'
+import type { FastifyRequest, FastifyReply } from 'fastify'
 import { getRedisClient } from '@/infra/redis.js'
 
 const KEY_TTL_SECONDS = 86_400   // 24 hours

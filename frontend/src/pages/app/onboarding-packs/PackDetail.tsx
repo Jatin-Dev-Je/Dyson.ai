@@ -1,4 +1,4 @@
-﻿import { useParams, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, ChevronRight, Download, Share2, Clock, Users } from 'lucide-react'
 import { SourcePill } from '@/components/shared/SourcePill'
@@ -6,18 +6,18 @@ import { ConfidenceBadge } from '@/components/shared/ConfidenceBadge'
 
 const sections = [
   {
-    title: 'How the Backend is structured',
-    summary: 'The backend is a Node.js + TypeScript modular monolith deployed on Cloud Run. Modules communicate through typed interfaces â€” never directly across module boundaries. The graph layer owns its own Postgres schema namespace.',
+    title: 'How the backend is structured',
+    summary: 'The backend is a Node.js + TypeScript modular monolith deployed on Cloud Run. Modules communicate through typed interfaces — never directly across module boundaries. The graph layer owns its own Postgres schema namespace.',
     sources: 3, updated: '2d ago',
   },
   {
     title: 'The 5 most important architecture decisions',
     decisions: [
-      { title: 'Modular monolith before microservices', date: 'Feb 28', confidence: 0.96, source: 'notion' as const },
-      { title: 'JWT auth replaces session tokens',       date: 'Mar 19', confidence: 0.91, source: 'slack'  as const },
+      { title: 'Modular monolith before microservices', date: 'Feb 28', confidence: 0.96, source: 'notion'  as const },
+      { title: 'JWT auth replaces session tokens',       date: 'Mar 19', confidence: 0.91, source: 'slack'   as const },
       { title: 'pgvector over Pinecone',                 date: 'Apr 18', confidence: 0.85, source: 'meeting' as const },
-      { title: 'Drizzle ORM over Prisma',                date: 'Feb 10', confidence: 0.79, source: 'slack'  as const },
-      { title: 'Cursor-based pagination',                date: 'Apr 24', confidence: 0.88, source: 'github'  as const },
+      { title: 'Drizzle ORM over Prisma',                date: 'Feb 10', confidence: 0.79, source: 'slack'   as const },
+      { title: 'Cursor-based pagination everywhere',     date: 'Apr 24', confidence: 0.88, source: 'github'  as const },
     ],
   },
   {
@@ -25,34 +25,36 @@ const sections = [
     rejected: [
       { option: 'Microservices from day one', reason: 'Too much operational overhead at current headcount. Revisit at 1M events/day.' },
       { option: 'Pinecone for vector storage', reason: 'Cost analysis showed 60% savings with pgvector at current scale.' },
-      { option: 'Prisma ORM',                  reason: 'Performance benchmarks favoured Drizzle. TypeScript-native design preferred.' },
+      { option: 'Prisma ORM', reason: 'Performance benchmarks favoured Drizzle. TypeScript-native design preferred.' },
     ],
   },
   {
     title: 'People to know on this team',
     people: [
-      { name: 'Alex Kumar',   role: 'Owns billing and payments',     initials: 'AK' },
-      { name: 'Sarah Chen',   role: 'Owns auth and API gateway',     initials: 'SC' },
-      { name: 'Priya Nair',   role: 'Owns infra and deployments',   initials: 'PN' },
+      { name: 'Alex Kumar',  role: 'Owns billing and payments',   initials: 'AK' },
+      { name: 'Sarah Chen',  role: 'Owns auth and API gateway',   initials: 'SC' },
+      { name: 'Priya Nair',  role: 'Owns infra and deployments',  initials: 'PN' },
     ],
   },
   {
     title: 'Open questions on this team',
     questions: [
-      { q: 'Stripe webhook idempotency â€” edge cases unresolved', last: '3d ago' },
-      { q: 'Extraction trigger threshold for ingestion service',  last: '1w ago' },
-      { q: 'HIPAA path for enterprise tier â€” legal review pending', last: '2w ago' },
+      { q: 'Stripe webhook idempotency — edge cases unresolved',      last: '3d ago' },
+      { q: 'Extraction trigger threshold for ingestion service',       last: '1w ago' },
+      { q: 'HIPAA path for enterprise tier — legal review pending',   last: '2w ago' },
     ],
   },
 ]
 
 export default function PackDetail() {
-  const { id } = useParams()
+  useParams()
 
   return (
     <div className="px-8 py-7 max-w-[780px] mx-auto">
+
       {/* Back */}
-      <Link to="/app/onboarding-packs" className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-3 hover:text-ink-2 transition-colors mb-7">
+      <Link to="/app/onboarding-packs"
+        className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-3 hover:text-ink-1 transition-colors mb-7">
         <ArrowLeft className="w-3.5 h-3.5" />
         Onboarding Packs
       </Link>
@@ -60,65 +62,67 @@ export default function PackDetail() {
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/30 to-violet-500/30 border border-line flex items-center justify-center">
-            <span className="text-[14px] font-bold text-ink-1">AK</span>
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-violet-400/20 border border-primary/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-[14px] font-bold text-primary">AK</span>
           </div>
           <div>
-            <h1 className="text-[20px] font-semibold text-ink-1 mb-0.5">Alex Kumar â€” Backend Team</h1>
+            <h1 className="text-[20px] font-semibold text-ink-1 mb-0.5 -tracking-wide">Alex Kumar — Backend Team</h1>
             <div className="flex items-center gap-3 text-[12px] text-ink-3">
-              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Joined 2 days ago</span>
-              <span>Â·</span>
-              <span className="flex items-center gap-1"><Users className="w-3 h-3" />7 decisions Â· 3 sources</span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Joined 2 days ago</span>
+              <span>·</span>
+              <span className="flex items-center gap-1"><Users className="w-3 h-3" /> 7 decisions · 3 sources</span>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-line bg-subtle text-[12.5px] text-ink-2 hover:text-ink-1 hover:border-line-strong hover:bg-hover transition-all">
-            <Share2 className="w-3.5 h-3.5" />
-            Share
+        <div className="flex gap-2 flex-shrink-0">
+          <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-line bg-white text-[12.5px] text-ink-2 hover:text-ink-1 hover:border-line-strong hover:bg-subtle transition-all">
+            <Share2 className="w-3.5 h-3.5" /> Share
           </button>
-          <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-line bg-subtle text-[12.5px] text-ink-2 hover:text-ink-1 hover:border-line-strong hover:bg-hover transition-all">
-            <Download className="w-3.5 h-3.5" />
-            Export
+          <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-line bg-white text-[12.5px] text-ink-2 hover:text-ink-1 hover:border-line-strong hover:bg-subtle transition-all">
+            <Download className="w-3.5 h-3.5" /> Export
           </button>
         </div>
       </div>
 
       <p className="text-[13.5px] text-ink-3 leading-relaxed mb-8 pb-8 border-b border-line">
-        Generated by Dyson from <span className="text-ink-2">142 events</span> across Slack, GitHub, and Notion.
+        Generated by Dyson from <span className="text-ink-1 font-medium">142 events</span> across Slack, GitHub, and Notion.
         This pack covers the 7 decisions that shaped the Backend team's current architecture, the people who made them,
         the trade-offs considered, and 3 open questions still on the team's plate.
       </p>
 
       {/* Sections */}
-      <div className="space-y-8">
+      <div className="space-y-5">
         {sections.map((section, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="rounded-lg border border-line bg-surface overflow-hidden"
+            transition={{ delay: i * 0.07, duration: 0.2 }}
+            className="rounded-xl border border-line bg-white overflow-hidden"
           >
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-line">
-              <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 border border-primary/20 w-5 h-5 rounded flex items-center justify-center flex-shrink-0">{i + 1}</span>
-              <h2 className="text-[14px] font-semibold text-ink-1">{section.title}</h2>
+            {/* Section header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-line bg-subtle/50">
+              <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 w-5 h-5 rounded flex items-center justify-center flex-shrink-0">
+                {i + 1}
+              </span>
+              <h2 className="text-[13.5px] font-semibold text-ink-1">{section.title}</h2>
             </div>
 
-            <div className="px-5 py-5">
-              {/* Summary text */}
+            <div className="px-5 py-4">
+
+              {/* Summary */}
               {'summary' in section && (
                 <p className="text-[13.5px] text-ink-2 leading-[1.7]">{section.summary}</p>
               )}
 
               {/* Decisions */}
               {'decisions' in section && (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {section.decisions.map((d, j) => (
-                    <div key={j} className="flex items-center gap-3 p-3 rounded-lg hover:bg-hover transition-colors group cursor-pointer">
+                    <div key={j} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-subtle transition-colors group cursor-pointer">
                       <div className="w-1.5 h-1.5 rounded-full bg-citation/60 flex-shrink-0" />
-                      <span className="flex-1 text-[13px] text-white/65 group-hover:text-ink-1 transition-colors">{d.title}</span>
-                      <span className="text-[11px] font-mono text-ink-3">{d.date}</span>
+                      <span className="flex-1 text-[13px] text-ink-2 group-hover:text-ink-1 transition-colors">{d.title}</span>
+                      <span className="text-[11px] font-mono text-ink-4">{d.date}</span>
                       <SourcePill source={d.source} />
                       <ConfidenceBadge confidence={d.confidence} />
                     </div>
@@ -126,11 +130,11 @@ export default function PackDetail() {
                 </div>
               )}
 
-              {/* Rejected */}
+              {/* Rejected options */}
               {'rejected' in section && (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {section.rejected.map((r, j) => (
-                    <div key={j} className="p-4 rounded-lg bg-subtle border border-line">
+                    <div key={j} className="p-4 rounded-xl bg-subtle border border-line">
                       <p className="text-[13px] font-medium text-ink-2 line-through mb-1.5">{r.option}</p>
                       <p className="text-[12.5px] text-ink-3 leading-relaxed">{r.reason}</p>
                     </div>
@@ -140,14 +144,14 @@ export default function PackDetail() {
 
               {/* People */}
               {'people' in section && (
-                <div className="space-y-3">
+                <div className="space-y-1.5">
                   {section.people.map((p, j) => (
-                    <div key={j} className="flex items-center gap-3 p-3 rounded-lg hover:bg-hover transition-colors cursor-pointer group">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-violet-500/30 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <div key={j} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-subtle transition-colors cursor-pointer group">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
                         <span className="text-[10px] font-bold text-primary">{p.initials}</span>
                       </div>
                       <div className="flex-1">
-                        <p className="text-[13px] font-medium text-ink-1 group-hover:text-ink-1 transition-colors">{p.name}</p>
+                        <p className="text-[13px] font-medium text-ink-1">{p.name}</p>
                         <p className="text-[11.5px] text-ink-3">{p.role}</p>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-ink-4 group-hover:text-primary transition-colors" />
@@ -156,12 +160,12 @@ export default function PackDetail() {
                 </div>
               )}
 
-              {/* Questions */}
+              {/* Open questions */}
               {'questions' in section && (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {section.questions.map((q, j) => (
-                    <div key={j} className="flex items-start gap-3 p-3.5 rounded-lg border border-line bg-subtle hover:border-line transition-colors cursor-pointer group">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400/60 mt-1.5 flex-shrink-0" />
+                    <div key={j} className="flex items-start gap-3 p-3.5 rounded-xl border border-line bg-subtle/50 hover:border-line-strong transition-colors cursor-pointer group">
+                      <div className="w-1.5 h-1.5 rounded-full bg-warning/60 mt-[5px] flex-shrink-0" />
                       <p className="flex-1 text-[13px] text-ink-2 group-hover:text-ink-1 transition-colors leading-relaxed">{q.q}</p>
                       <span className="text-[10px] font-mono text-ink-4 flex-shrink-0 mt-0.5">{q.last}</span>
                     </div>
@@ -175,13 +179,9 @@ export default function PackDetail() {
 
       <div className="mt-8 pt-6 border-t border-line text-center">
         <p className="text-[11.5px] text-ink-4">
-          Generated by Dyson Â· {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          Generated by Dyson · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
       </div>
     </div>
   )
 }
-
-
-
-

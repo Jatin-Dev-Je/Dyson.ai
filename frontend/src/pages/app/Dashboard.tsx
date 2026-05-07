@@ -8,27 +8,26 @@ import { SourcePill } from '@/components/shared/SourcePill'
 import { ConfidenceBadge } from '@/components/shared/ConfidenceBadge'
 import { authApi } from '@/lib/api'
 
-// ─── Static data ──────────────────────────────────────────────────────────────
-
+// ─── Static data (dashboard wiring in progress) ───────────────────────────────
 const STATS = [
-  { label: 'Total memories',     value: '1,247', trend: '+24 today',     color: '#5B5BD6', Icon: Brain      },
-  { label: 'Decisions detected', value: '89',    trend: '+3 this week',  color: '#D97706', Icon: Network    },
-  { label: 'Recalls this week',  value: '34',    trend: '↑ 12% vs last', color: '#7C3AED', Icon: TrendingUp },
-  { label: 'Active members',     value: '12',    trend: '3 online now',  color: '#16A34A', Icon: Users      },
+  { label: 'Total memories',     value: '1,247', trend: '+24 today',    color: '#5B5BD6', Icon: Brain      },
+  { label: 'Decisions detected', value: '89',    trend: '+3 this week', color: '#D97706', Icon: Network    },
+  { label: 'Recalls this week',  value: '34',    trend: '↑ 12% vs last',color: '#7C3AED', Icon: TrendingUp },
+  { label: 'Active members',     value: '12',    trend: '3 online now', color: '#16A34A', Icon: Users      },
 ]
 
 const MEMORIES = [
-  { id: 'm1', title: 'Moved to cursor-based pagination',   team: 'Backend',  source: 'slack'  as const, time: '2d ago' },
-  { id: 'm2', title: 'Deprecated v1 API by June 2026',     team: 'Platform', source: 'github' as const, time: '3d ago' },
-  { id: 'm3', title: 'Adopted pgvector over Pinecone',     team: 'Infra',    source: 'notion' as const, time: '5d ago' },
-  { id: 'm4', title: 'JWT auth replaces session tokens',   team: 'Backend',  source: 'slack'  as const, time: '1w ago' },
-  { id: 'm5', title: 'Retry budget capped at 3 for jobs',  team: 'Infra',    source: 'github' as const, time: '1w ago' },
+  { id: 'm1', title: 'Moved to cursor-based pagination',  team: 'Backend',  source: 'slack'  as const, time: '2d ago' },
+  { id: 'm2', title: 'Deprecated v1 API by June 2026',    team: 'Platform', source: 'github' as const, time: '3d ago' },
+  { id: 'm3', title: 'Adopted pgvector over Pinecone',    team: 'Infra',    source: 'notion' as const, time: '5d ago' },
+  { id: 'm4', title: 'JWT auth replaces session tokens',  team: 'Backend',  source: 'slack'  as const, time: '1w ago' },
+  { id: 'm5', title: 'Retry budget capped at 3 for jobs', team: 'Infra',    source: 'github' as const, time: '1w ago' },
 ]
 
 const RECALLS = [
-  { id: 1, query: 'What do we know about our auth system?',      confidence: 0.91, sources: 5, time: '2h ago'  },
-  { id: 2, query: 'What happened during the Q3 incident?',        confidence: 0.87, sources: 4, time: '5h ago'  },
-  { id: 3, query: 'What constraints exist on the payments service?', confidence: 0.74, sources: 3, time: '1d ago' },
+  { id: 1, query: 'What do we know about our auth system?',           confidence: 0.91, sources: 5, time: '2h ago' },
+  { id: 2, query: 'What happened during the Q3 incident?',            confidence: 0.87, sources: 4, time: '5h ago' },
+  { id: 3, query: 'What constraints exist on the payments service?',  confidence: 0.74, sources: 3, time: '1d ago' },
 ]
 
 const ACTIVITY = [
@@ -45,157 +44,52 @@ const SUGGESTIONS = [
 ]
 
 const SETUP = [
-  { label: 'Connect Slack',    sub: 'Ingest conversations',   done: true,  to: '/app/settings/sources'  },
-  { label: 'Connect GitHub',   sub: 'Capture PRs and issues', done: true,  to: '/app/settings/sources'  },
-  { label: 'Invite your team', sub: 'Share company memory',   done: false, to: '/app/settings/members'  },
+  { label: 'Connect Slack',    sub: 'Ingest conversations',   done: true,  to: '/app/settings/sources' },
+  { label: 'Connect GitHub',   sub: 'Capture PRs and issues', done: true,  to: '/app/settings/sources' },
+  { label: 'Invite your team', sub: 'Share company memory',   done: false, to: '/app/settings/members' },
+]
+
+const NAV_ITEMS = [
+  { icon: Brain,   label: 'Recall',         sub: "Ask your team's memory",  to: '/app/recall'           },
+  { icon: Network, label: 'Memory Graph',   sub: 'Explore decisions',       to: '/app/decisions'        },
+  { icon: Users,   label: 'Team Briefings', sub: 'Onboarding packs',        to: '/app/onboarding-packs' },
 ]
 
 // ─── Recall box ───────────────────────────────────────────────────────────────
-
 function RecallBox({ onAsk }: { onAsk: (q: string) => void }) {
   const [q,     setQ]     = useState('')
   const [focus, setFocus] = useState(false)
 
   return (
     <form onSubmit={e => { e.preventDefault(); if (q.trim()) onAsk(q) }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '13px 18px',
-        background: focus ? 'white' : '#FAFAF8',
-        border: `1.5px solid ${focus ? 'rgba(91,91,214,0.5)' : '#E8E6E1'}`,
-        borderRadius: 14,
-        boxShadow: focus ? '0 0 0 4px rgba(91,91,214,0.08)' : '0 1px 3px rgba(0,0,0,0.04)',
-        transition: 'all 150ms ease',
-      }}>
-        <Brain size={18} style={{ color: focus ? '#5B5BD6' : '#b0b0b0', flexShrink: 0, transition: 'color 150ms' }} />
+      <div className={`flex items-center gap-3 rounded-xl px-5 py-3.5 transition-all border ${
+        focus
+          ? 'bg-white border-primary/40 shadow-[0_0_0_3px_rgba(91,91,214,0.10)]'
+          : 'bg-subtle border-line'
+      }`}>
+        <Brain className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${focus ? 'text-primary' : 'text-ink-4'}`} />
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
           placeholder="Ask anything your team has ever decided, discussed, or documented…"
-          style={{
-            flex: 1, border: 'none', background: 'transparent',
-            fontSize: 14.5, color: '#111', outline: 'none',
-            letterSpacing: '-0.01em',
-          }}
+          className="flex-1 bg-transparent text-[14.5px] text-ink-1 placeholder:text-ink-4 outline-none"
         />
         {q.trim() ? (
-          <button type="submit" style={{
-            height: 30, padding: '0 14px',
-            background: '#5B5BD6', color: 'white',
-            border: 'none', borderRadius: 8,
-            fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
-            letterSpacing: '-0.01em', flexShrink: 0,
-          }}>
+          <button type="submit"
+            className="h-7 px-3.5 rounded-lg bg-primary text-[12px] font-medium text-white hover:bg-primary/90 transition-colors flex-shrink-0">
             Ask
           </button>
         ) : (
-          <kbd style={{ fontSize: 11, color: '#ccc', fontFamily: 'monospace', flexShrink: 0 }}>↵</kbd>
+          <kbd className="text-[10.5px] text-ink-4 font-mono flex-shrink-0">↵</kbd>
         )}
       </div>
     </form>
   )
 }
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
-
-function StatCard({ value, label, trend, color, Icon }: typeof STATS[number]) {
-  return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #ECEAE6',
-      borderRadius: 12,
-      padding: '16px 18px',
-      borderTop: `3px solid ${color}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 7,
-          background: `${color}14`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon size={14} style={{ color }} />
-        </div>
-        <span style={{ fontSize: 11, color: '#b0b0b0', letterSpacing: '-0.01em' }}>{trend}</span>
-      </div>
-      <p style={{ fontSize: 24, fontWeight: 700, color: '#111', letterSpacing: '-0.03em', lineHeight: 1, margin: 0 }}>
-        {value}
-      </p>
-      <p style={{ fontSize: 12, color: '#888', margin: '5px 0 0', letterSpacing: '-0.01em' }}>{label}</p>
-    </div>
-  )
-}
-
-// ─── Section header ───────────────────────────────────────────────────────────
-
-function SectionHead({ title, linkLabel, linkTo }: { title: string; linkLabel?: string; linkTo?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-      <h2 style={{
-        fontSize: 11, fontWeight: 700, color: '#999',
-        textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0,
-      }}>
-        {title}
-      </h2>
-      {linkLabel && linkTo && (
-        <Link to={linkTo} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 3,
-          fontSize: 12, color: '#bbb', textDecoration: 'none',
-          letterSpacing: '-0.01em', transition: 'color 80ms',
-        }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#5B5BD6')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#bbb')}
-        >
-          {linkLabel} <ArrowUpRight size={12} />
-        </Link>
-      )}
-    </div>
-  )
-}
-
-// ─── Card ─────────────────────────────────────────────────────────────────────
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #ECEAE6',
-      borderRadius: 12,
-      overflow: 'hidden',
-    }}>
-      {children}
-    </div>
-  )
-}
-
-// ─── Row with hover ───────────────────────────────────────────────────────────
-
-function Row({ onClick, children, last = false }: {
-  onClick?: () => void; children: React.ReactNode; last?: boolean
-}) {
-  const [hov, setHov] = useState(false)
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 16px',
-        borderBottom: last ? 'none' : '1px solid #F5F3EF',
-        background: hov && onClick ? '#FAFAF8' : 'transparent',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'background 80ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-
 export default function Dashboard() {
   const navigate  = useNavigate()
   const user      = authApi.getUser()
@@ -203,333 +97,208 @@ export default function Dashboard() {
   const hour      = new Date().getHours()
   const greeting  = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
   const today     = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-
   const doneCount = SETUP.filter(s => s.done).length
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '36px 36px 64px' }}>
+    <div className="max-w-[1000px] mx-auto px-9 py-9 pb-16">
 
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 style={{
-            fontSize: 26, fontWeight: 700, color: '#111',
-            letterSpacing: '-0.025em', margin: 0, lineHeight: 1.2,
-          }}>
+          <h1 className="text-[26px] font-bold text-ink-1 -tracking-wide leading-tight mb-1.5">
             {greeting}, {firstName}
           </h1>
-          <p style={{ fontSize: 13.5, color: '#888', margin: '6px 0 0', letterSpacing: '-0.01em' }}>
+          <p className="text-[13.5px] text-ink-3">
             Your workspace has{' '}
-            <span style={{ color: '#333', fontWeight: 500 }}>1,247 memories</span>
+            <span className="text-ink-1 font-medium">1,247 memories</span>
             {' '}across{' '}
-            <span style={{ color: '#333', fontWeight: 500 }}>2 connected sources</span>
+            <span className="text-ink-1 font-medium">2 connected sources</span>
             . 24 captured today.
           </p>
         </div>
-        <span style={{
-          fontSize: 12, color: '#c0c0c0', flexShrink: 0,
-          paddingTop: 5, letterSpacing: '-0.01em',
-        }}>
-          {today}
-        </span>
+        <span className="text-[12px] text-ink-4 flex-shrink-0 pt-1">{today}</span>
       </div>
 
-      {/* ── Recall hero ──────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 10 }}>
+      {/* ── Recall box ─────────────────────────────────────────────────────── */}
+      <div className="mb-4">
         <RecallBox onAsk={q => navigate(`/app/recall?q=${encodeURIComponent(q)}`)} />
       </div>
-      <div style={{ display: 'flex', gap: 7, marginBottom: 32, flexWrap: 'wrap' }}>
+      <div className="flex gap-2 mb-8 flex-wrap">
         {SUGGESTIONS.map(s => (
-          <button
-            key={s}
+          <button key={s}
             onClick={() => navigate(`/app/recall?q=${encodeURIComponent(s)}`)}
-            style={{
-              fontSize: 12, color: '#888',
-              background: 'white', border: '1px solid #ECEAE6',
-              padding: '4px 12px', borderRadius: 99,
-              cursor: 'pointer', letterSpacing: '-0.01em',
-              transition: 'all 100ms',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(91,91,214,0.3)'
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#5B5BD6'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#ECEAE6'
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#888'
-            }}
-          >
+            className="text-[12px] text-ink-3 bg-white border border-line px-3 py-1.5 rounded-full hover:border-primary/30 hover:text-primary transition-all">
             {s}
           </button>
         ))}
       </div>
 
-      {/* ── Stats ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 36 }}>
-        {STATS.map((s, i) => <StatCard key={i} {...s} />)}
+      {/* ── Stats ──────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-4 gap-3 mb-8">
+        {STATS.map((s, i) => (
+          <div key={i}
+            className="bg-white border border-line rounded-xl p-4"
+            style={{ borderTop: `3px solid ${s.color}` }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: `${s.color}14` }}>
+                <s.Icon size={14} style={{ color: s.color }} />
+              </div>
+              <span className="text-[11px] text-ink-4 -tracking-tight">{s.trend}</span>
+            </div>
+            <p className="text-[24px] font-bold text-ink-1 -tracking-wide leading-none mb-1">{s.value}</p>
+            <p className="text-[12px] text-ink-3">{s.label}</p>
+          </div>
+        ))}
       </div>
 
-      {/* ── Main grid ────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 28, alignItems: 'start' }}>
+      {/* ── Main grid ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-[1fr_332px] gap-7 items-start">
 
-        {/* ── Left column ─────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        {/* Left column */}
+        <div className="space-y-6">
 
           {/* Recent memories */}
-          <div>
-            <SectionHead title="Recent memories" linkLabel="Memory graph" linkTo="/app/decisions" />
-            <Card>
+          <section>
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-[10.5px] font-bold text-ink-3 uppercase tracking-[0.08em]">Recent memories</h2>
+              <Link to="/app/decisions"
+                className="flex items-center gap-1 text-[12px] text-ink-4 hover:text-primary transition-colors">
+                Memory graph <ArrowUpRight size={12} />
+              </Link>
+            </div>
+            <div className="bg-white border border-line rounded-xl overflow-hidden">
               {MEMORIES.map((m, i) => (
-                <Row key={m.id} onClick={() => navigate('/app/decisions')} last={i === MEMORIES.length - 1}>
-                  {/* Source pill */}
+                <div key={m.id}
+                  onClick={() => navigate('/app/decisions')}
+                  className={`flex items-center gap-3 px-4 py-3 hover:bg-subtle transition-colors cursor-pointer ${i < MEMORIES.length - 1 ? 'border-b border-line/60' : ''}`}>
                   <SourcePill source={m.source} />
-                  {/* Title */}
-                  <p style={{
-                    flex: 1, fontSize: 13.5, color: '#1a1a1a', margin: 0,
-                    letterSpacing: '-0.01em', lineHeight: 1.3,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {m.title}
-                  </p>
-                  {/* Team chip */}
-                  <span style={{
-                    fontSize: 11, color: '#999', background: '#F5F3EF',
-                    border: '1px solid #ECEAE6', padding: '2px 8px',
-                    borderRadius: 99, flexShrink: 0, letterSpacing: '-0.01em',
-                  }}>
-                    {m.team}
-                  </span>
-                  {/* Time */}
-                  <span style={{ fontSize: 11.5, color: '#c0c0c0', flexShrink: 0, width: 44, textAlign: 'right' }}>
-                    {m.time}
-                  </span>
-                  <ChevronRight size={13} style={{ color: '#ddd', flexShrink: 0 }} />
-                </Row>
+                  <p className="flex-1 text-[13px] text-ink-1 -tracking-tight truncate">{m.title}</p>
+                  <span className="text-[11px] text-ink-4 bg-subtle border border-line px-2 py-0.5 rounded-full flex-shrink-0">{m.team}</span>
+                  <span className="text-[11.5px] text-ink-4 flex-shrink-0 w-10 text-right">{m.time}</span>
+                  <ChevronRight size={13} className="text-line flex-shrink-0" />
+                </div>
               ))}
-            </Card>
-          </div>
+            </div>
+          </section>
 
           {/* Recent recalls */}
-          <div>
-            <SectionHead title="Recent recalls" linkLabel="Open Recall" linkTo="/app/recall" />
-            <Card>
+          <section>
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-[10.5px] font-bold text-ink-3 uppercase tracking-[0.08em]">Recent recalls</h2>
+              <Link to="/app/recall"
+                className="flex items-center gap-1 text-[12px] text-ink-4 hover:text-primary transition-colors">
+                Open Recall <ArrowUpRight size={12} />
+              </Link>
+            </div>
+            <div className="bg-white border border-line rounded-xl overflow-hidden">
               {RECALLS.map((r, i) => {
-                const confColor = r.confidence >= 0.85 ? '#16A34A' : r.confidence >= 0.72 ? '#D97706' : '#DC2626'
+                const dotColor = r.confidence >= 0.85 ? 'bg-success' : r.confidence >= 0.72 ? 'bg-citation' : 'bg-danger'
                 return (
-                  <Row
-                    key={r.id}
+                  <div key={r.id}
                     onClick={() => navigate(`/app/recall?q=${encodeURIComponent(r.query)}`)}
-                    last={i === RECALLS.length - 1}
-                  >
-                    {/* Confidence accent dot */}
-                    <span style={{ width: 8, height: 8, borderRadius: 99, background: confColor, flexShrink: 0 }} />
-                    {/* Query */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{
-                        fontSize: 13.5, color: '#1a1a1a', margin: 0,
-                        letterSpacing: '-0.01em', lineHeight: 1.3,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {r.query}
-                      </p>
-                      <p style={{ fontSize: 11.5, color: '#bbb', margin: '3px 0 0', letterSpacing: '-0.01em' }}>
-                        {r.sources} sources · {r.time}
-                      </p>
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-subtle transition-colors cursor-pointer ${i < RECALLS.length - 1 ? 'border-b border-line/60' : ''}`}>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] text-ink-1 -tracking-tight truncate">{r.query}</p>
+                      <p className="text-[11px] text-ink-4 mt-0.5">{r.sources} sources · {r.time}</p>
                     </div>
-                    {/* Confidence */}
                     <ConfidenceBadge confidence={r.confidence} showBar />
-                    <ChevronRight size={13} style={{ color: '#ddd', flexShrink: 0 }} />
-                  </Row>
+                    <ChevronRight size={13} className="text-line flex-shrink-0" />
+                  </div>
                 )
               })}
-              {/* Prompt footer */}
-              <div
-                onClick={() => navigate('/app/recall')}
-                style={{
-                  padding: '10px 16px', borderTop: '1px solid #F5F3EF',
-                  cursor: 'pointer', transition: 'background 80ms',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#FAFAF8' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
-              >
-                <span style={{ fontSize: 13, color: '#bbb', letterSpacing: '-0.01em' }}>
-                  Ask a new question…
-                </span>
+              <div onClick={() => navigate('/app/recall')}
+                className="flex items-center px-4 py-2.5 border-t border-line/60 cursor-pointer hover:bg-subtle transition-colors">
+                <span className="text-[12.5px] text-ink-4">Ask a new question…</span>
               </div>
-            </Card>
-          </div>
+            </div>
+          </section>
         </div>
 
-        {/* ── Right column ────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* Right column */}
+        <div className="space-y-5">
 
           {/* Live activity */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <h2 style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                Activity
-              </h2>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#888' }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: 99, background: '#16A34A', flexShrink: 0,
-                  boxShadow: '0 0 0 3px rgba(22,163,74,0.15)',
-                }} />
+          <section>
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-[10.5px] font-bold text-ink-3 uppercase tracking-[0.08em]">Activity</h2>
+              <span className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-success" style={{ boxShadow: '0 0 0 3px rgba(22,163,74,0.15)' }} />
                 Live
               </span>
             </div>
-            <Card>
+            <div className="bg-white border border-line rounded-xl overflow-hidden">
               {ACTIVITY.map((a, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 12,
-                  padding: '10px 16px',
-                  borderBottom: i < ACTIVITY.length - 1 ? '1px solid #F5F3EF' : 'none',
-                }}>
-                  {/* Timeline line */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, paddingTop: 2 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: 99, background: '#E8E6E1', flexShrink: 0 }} />
-                    {i < ACTIVITY.length - 1 && (
-                      <span style={{ width: 1, flex: 1, background: '#F0EFED', marginTop: 4, minHeight: 16 }} />
-                    )}
+                <div key={i} className={`flex gap-3 px-4 py-3 ${i < ACTIVITY.length - 1 ? 'border-b border-line/60' : ''}`}>
+                  <div className="flex flex-col items-center flex-shrink-0 pt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-line" />
+                    {i < ACTIVITY.length - 1 && <span className="w-px flex-1 bg-line/50 mt-1.5" />}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ marginBottom: 4 }}>
-                      <SourcePill source={a.source} />
-                    </div>
-                    <p style={{ fontSize: 12.5, color: '#3a3a3a', margin: 0, lineHeight: 1.45, letterSpacing: '-0.01em' }}>
-                      {a.text}
-                    </p>
-                    <p style={{ fontSize: 11, color: '#bbb', margin: '4px 0 0' }}>{a.time}</p>
+                  <div className="flex-1 min-w-0 pb-0.5">
+                    <div className="mb-1"><SourcePill source={a.source} /></div>
+                    <p className="text-[12.5px] text-ink-2 leading-snug">{a.text}</p>
+                    <p className="text-[11px] text-ink-4 mt-1">{a.time}</p>
                   </div>
                 </div>
               ))}
-            </Card>
-          </div>
+            </div>
+          </section>
 
           {/* Setup checklist */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <h2 style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                Setup
-              </h2>
-              <span style={{ fontSize: 11, color: '#bbb', letterSpacing: '-0.01em' }}>
-                {doneCount}/{SETUP.length} complete
-              </span>
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-[10.5px] font-bold text-ink-3 uppercase tracking-[0.08em]">Setup</h2>
+              <span className="text-[11px] text-ink-4">{doneCount}/{SETUP.length} complete</span>
             </div>
-            {/* Progress bar */}
-            <div style={{
-              height: 3, background: '#F0EFED', borderRadius: 99, marginBottom: 10, overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%', background: '#5B5BD6', borderRadius: 99,
-                width: `${(doneCount / SETUP.length) * 100}%`,
-                transition: 'width 300ms ease',
-              }} />
+            <div className="h-1 bg-line rounded-full mb-3 overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${(doneCount / SETUP.length) * 100}%` }} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="space-y-2">
               {SETUP.map((item, i) => (
-                <div
-                  key={i}
+                <div key={i}
                   onClick={() => navigate(item.to)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '10px 14px',
-                    background: 'white', border: '1px solid #ECEAE6', borderRadius: 10,
-                    cursor: 'pointer', transition: 'all 100ms',
-                  }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.borderColor = item.done ? '#ECEAE6' : 'rgba(91,91,214,0.25)'
-                    el.style.background = '#FAFAF8'
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.borderColor = '#ECEAE6'
-                    el.style.background = 'white'
-                  }}
-                >
-                  {/* Check circle */}
-                  <div style={{
-                    width: 22, height: 22, borderRadius: 99, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: item.done ? 'rgba(22,163,74,0.10)' : 'white',
-                    border: `1.5px solid ${item.done ? '#16A34A' : '#E0DEDB'}`,
-                  }}>
-                    {item.done && <Check size={11} style={{ color: '#16A34A' }} />}
+                  className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-line rounded-xl cursor-pointer hover:border-primary/25 hover:bg-subtle/50 transition-all">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border transition-all ${
+                    item.done
+                      ? 'bg-success/10 border-success/40'
+                      : 'bg-white border-line'
+                  }`}>
+                    {item.done && <Check size={11} className="text-success" />}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontSize: 13, fontWeight: 500, margin: 0, letterSpacing: '-0.01em',
-                      color: item.done ? '#aaa' : '#1a1a1a',
-                      textDecoration: item.done ? 'line-through' : 'none',
-                    }}>
+                  <div className="flex-1">
+                    <p className={`text-[12.5px] font-medium -tracking-tight ${item.done ? 'text-ink-4 line-through' : 'text-ink-1'}`}>
                       {item.label}
                     </p>
-                    <p style={{ fontSize: 11.5, color: '#c0c0c0', margin: '2px 0 0', letterSpacing: '-0.01em' }}>
-                      {item.sub}
-                    </p>
+                    <p className="text-[11px] text-ink-4">{item.sub}</p>
                   </div>
-                  {!item.done && <ChevronRight size={14} style={{ color: '#ccc', flexShrink: 0 }} />}
+                  {!item.done && <ChevronRight size={13} className="text-ink-4 flex-shrink-0" />}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
           {/* Quick navigate */}
-          <div>
-            <h2 style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
-              Navigate
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[
-                { icon: Brain,   label: 'Recall',          sub: 'Ask your team\'s memory', to: '/app/recall'           },
-                { icon: Network, label: 'Memory Graph',    sub: 'Explore decisions',       to: '/app/decisions'        },
-                { icon: Users,   label: 'Team Briefings',  sub: 'Onboarding packs',        to: '/app/onboarding-packs' },
-              ].map(item => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <div
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 14px',
-                      background: 'white', border: '1px solid #ECEAE6', borderRadius: 10,
-                      transition: 'all 100ms', cursor: 'pointer',
-                    }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLDivElement
-                      el.style.borderColor = 'rgba(91,91,214,0.25)'
-                      el.style.background = '#FAFAF8'
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLDivElement
-                      el.style.borderColor = '#ECEAE6'
-                      el.style.background = 'white'
-                    }}
-                  >
-                    <div style={{
-                      width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                      background: 'rgba(91,91,214,0.07)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <item.icon size={14} style={{ color: '#5B5BD6' }} />
+          <section>
+            <h2 className="text-[10.5px] font-bold text-ink-3 uppercase tracking-[0.08em] mb-2.5">Navigate</h2>
+            <div className="space-y-2">
+              {NAV_ITEMS.map(item => (
+                <Link key={item.to} to={item.to} className="block">
+                  <div className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-line rounded-xl hover:border-primary/25 hover:bg-subtle/50 transition-all cursor-pointer group">
+                    <div className="w-7 h-7 rounded-lg bg-primary/[0.07] flex items-center justify-center flex-shrink-0">
+                      <item.icon size={13} className="text-primary" />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a1a', margin: 0, letterSpacing: '-0.01em' }}>
-                        {item.label}
-                      </p>
-                      <p style={{ fontSize: 11.5, color: '#bbb', margin: '1px 0 0', letterSpacing: '-0.01em' }}>
-                        {item.sub}
-                      </p>
+                    <div className="flex-1">
+                      <p className="text-[12.5px] font-medium text-ink-1 -tracking-tight">{item.label}</p>
+                      <p className="text-[11px] text-ink-4">{item.sub}</p>
                     </div>
-                    <ArrowUpRight size={13} style={{ color: '#ccc', flexShrink: 0 }} />
+                    <ArrowUpRight size={13} className="text-ink-4 group-hover:text-primary transition-colors flex-shrink-0" />
                   </div>
                 </Link>
               ))}
             </div>
-          </div>
-
+          </section>
         </div>
       </div>
     </div>

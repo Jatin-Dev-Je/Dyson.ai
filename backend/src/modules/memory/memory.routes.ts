@@ -69,7 +69,10 @@ export default async function memoryRoutes(app: FastifyInstance) {
     },
     preHandler: [agentAuthMiddleware, requireScope('write')],
   }, async (req, reply) => {
-    const { tenantId } = req.agentContext!
+    if (!req.agentContext) {
+      return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } })
+    }
+    const { tenantId } = req.agentContext
     const input = CreateMemorySchema.parse(req.body)
     const memory = await createMemory(tenantId, 'agent', input)
     return reply.status(201).send({ data: memory })

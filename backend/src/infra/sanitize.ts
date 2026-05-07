@@ -36,18 +36,18 @@ const INJECTION_PATTERNS = [
 export function sanitizeText(raw: string): string {
   if (!raw || typeof raw !== 'string') return ''
 
-  return raw
+  let sanitized = raw
     // Remove null bytes and control characters
     .replace(CONTROL_CHARS, '')
     // Normalize line endings
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
-    // Remove prompt injection markers (preserve the surrounding text)
-    .replace(INJECTION_PATTERNS[0]!, '')
-    .replace(INJECTION_PATTERNS[1]!, '')
-    .replace(INJECTION_PATTERNS[2]!, '')
-    .replace(INJECTION_PATTERNS[3]!, '')
-    .replace(INJECTION_PATTERNS[4]!, '')
+
+  for (const pattern of INJECTION_PATTERNS) {
+    sanitized = sanitized.replace(pattern, '')
+  }
+
+  return sanitized
     // Collapse 3+ consecutive newlines to 2 (preserve paragraph breaks)
     .replace(/\n{3,}/g, '\n\n')
     // Trim leading/trailing whitespace

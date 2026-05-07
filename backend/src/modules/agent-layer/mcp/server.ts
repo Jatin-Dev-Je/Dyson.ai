@@ -261,7 +261,7 @@ export function createDysonMcpServer(handlers: DysonMcpHandlers): McpServer {
         ? '_No memories yet — connect Slack and GitHub to start ingesting company context._'
         : r.memories.map((m, i) => {
             const when = m.occurredAt ? ` · ${m.occurredAt}` : ''
-            const conf = m.confidence != null ? ` · ${(m.confidence * 100).toFixed(0)}%` : ''
+            const conf = m.confidence !== null && m.confidence !== undefined ? ` · ${(m.confidence * 100).toFixed(0)}%` : ''
             return `${i + 1}. [${m.type}/${m.source}] **${m.title}**${when}${conf}${m.sourceUrl ? `\n   ${m.sourceUrl}` : ''}`
           }).join('\n\n')
 
@@ -285,7 +285,7 @@ export function createDysonMcpServer(handlers: DysonMcpHandlers): McpServer {
     async () => {
       const r   = await handlers.workspaceContext()
       const mem = r.recentMemories.map((m, i) =>
-        `${i + 1}. [${m.type}/${m.source}] ${m.title}${m.confidence != null ? ` · ${(m.confidence * 100).toFixed(0)}%` : ''}`
+        `${i + 1}. [${m.type}/${m.source}] ${m.title}${m.confidence !== null && m.confidence !== undefined ? ` · ${(m.confidence * 100).toFixed(0)}%` : ''}`
       ).join('\n')
       const rec = r.recentRecalls.map((q, i) => `${i + 1}. ${q.question}`).join('\n')
 

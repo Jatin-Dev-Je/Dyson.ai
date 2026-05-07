@@ -37,9 +37,7 @@ export function getRedisClient(): RedisClient | null {
       console.error('[redis] connection error:', err.message)
     })
 
-    _client.on('connect', () => {
-      console.info('[redis] connected')
-    })
+    _client.on('connect', () => {})
   }
 
   return _client

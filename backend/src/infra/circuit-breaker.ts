@@ -17,8 +17,6 @@
  *   const result  = await breaker.call(() => callGemini(prompt))
  */
 
-import { env } from '@/config/env.js'
-
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN'
 
 export interface CircuitBreakerOptions {

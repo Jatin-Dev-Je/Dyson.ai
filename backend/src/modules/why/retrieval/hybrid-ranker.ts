@@ -29,8 +29,6 @@ import type { SourceNodeSummary } from '../why.types.js'
 import {
   MAX_CONTEXT_NODES,
   DECISION_BOOST_FACTOR,
-  RECENCY_BOOST_FACTOR,
-  RECENCY_BOOST_DAYS,
 } from '@/config/constants.js'
 
 // Exponential decay lambda — controls how fast recency boost fades.

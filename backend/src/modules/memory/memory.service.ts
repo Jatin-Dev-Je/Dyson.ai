@@ -7,7 +7,7 @@ import { generateEmbedding } from '@/modules/processing/processors/embedding-gen
 // Lightweight console logger for use outside request handlers
 const log = {
   debug: (_msg: string) => {},
-  info:  (msg: string) => console.info('[memory]', msg),
+  info:  (_msg: string) => {},
   warn:  (msg: string) => console.warn('[memory]', msg),
   error: (obj: unknown, msg?: string) => console.error('[memory]', msg ?? '', obj),
   child: () => log,
@@ -16,7 +16,7 @@ const log = {
   level: 'info',
   silent: () => {},
 } as unknown as import('fastify').FastifyBaseLogger
-import { DysonError, NotFoundError } from '@/shared/errors.js'
+import { NotFoundError } from '@/shared/errors.js'
 import type { CreateMemoryInput, ListMemoriesQuery } from './memory.types.js'
 
 // ─── Create ───────────────────────────────────────────────────────────────

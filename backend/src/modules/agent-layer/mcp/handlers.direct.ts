@@ -89,7 +89,7 @@ export function createDirectHandlers(
             source:    d.source,
             sourceUrl: d.sourceUrl ?? null,
             ...(d.occurredAt && { occurredAt: new Date(d.occurredAt).toISOString() }),
-            ...(d.decisionConfidence != null && { confidence: d.decisionConfidence }),
+            ...(d.decisionConfidence !== null && d.decisionConfidence !== undefined && { confidence: d.decisionConfidence }),
           })),
         }
       }
@@ -170,7 +170,7 @@ export function createDirectHandlers(
           title:  d.title,
           type:   'decision',
           source: d.source,
-          ...(d.decisionConfidence != null && { confidence: d.decisionConfidence }),
+          ...(d.decisionConfidence !== null && d.decisionConfidence !== undefined && { confidence: d.decisionConfidence }),
           ...(d.occurredAt && { occurredAt: new Date(d.occurredAt).toISOString() }),
         })),
         recentRecalls: recalls.map(q => ({ id: q.id, question: q.question })),

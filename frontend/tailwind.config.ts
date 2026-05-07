@@ -39,10 +39,12 @@ export default {
         },
 
         // Functional
-        success: '#16A34A',
-        warning: '#D97706',
-        danger:  '#DC2626',
-        amber:   '#D97706',
+        success:  '#16A34A',
+        warning:  '#D97706',
+        danger:   '#DC2626',
+        amber:    '#D97706',
+        // Citation — used for inline citation references and generating states
+        citation: '#D97706',
       },
 
       fontSize: {

@@ -12,7 +12,7 @@ import { enqueue } from '@/infra/queue/queue.client.js'
 import { UnauthorizedError } from '@/shared/errors.js'
 import { EventSource, EntityType } from '@/shared/types/entities.js'
 import { db } from '@/infra/db/client.js'
-import { contextNodes, whyQueries } from '@/infra/db/schema/index.js'
+import { whyQueries } from '@/infra/db/schema/index.js'
 
 function requireAgentContext(req: FastifyRequest): { tenantId: string; scopes: string[] } {
   if (!req.agentContext) throw new UnauthorizedError()

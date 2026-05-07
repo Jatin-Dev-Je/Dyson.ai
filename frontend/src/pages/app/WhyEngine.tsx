@@ -13,7 +13,7 @@ const suggestions = [
 ]
 
 function sourceFromCitation(c: Citation): 'slack' | 'github' | 'notion' | 'meeting' | 'linear' {
-  const s = c.source.toLowerCase()
+  const s = `${c.sourceUrl ?? ''} ${c.sourceNodeId}`.toLowerCase()
   if (s.includes('slack'))   return 'slack'
   if (s.includes('github'))  return 'github'
   if (s.includes('notion'))  return 'notion'
@@ -60,7 +60,7 @@ export default function Recall() {
 
       {/* Search */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-3 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all shadow-sm">
+        <div className="flex items-center gap-3 bg-surface border border-line rounded-xl px-4 py-3 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all shadow-sm">
           <Brain className="w-4 h-4 text-ink-3 flex-shrink-0" />
           <input
             value={query}
@@ -72,16 +72,16 @@ export default function Recall() {
           <button
             onClick={() => handleQuery(query)}
             disabled={!query.trim() || loading}
-            className="flex items-center gap-1.5 h-7 px-3 rounded-md bg-primary text-[12px] font-medium text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0">
+            className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-primary text-[12px] font-medium text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0">
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
           </button>
         </div>
 
         {!result && !loading && !error && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {suggestions.map(s => (
               <button key={s} onClick={() => handleQuery(s)}
-                className="text-[12px] text-ink-2 bg-surface border border-line rounded-md px-3 py-1.5 hover:border-line-strong hover:bg-subtle hover:text-ink-1 transition-all">
+                className="text-[12px] text-ink-2 bg-surface border border-line rounded-full px-3 py-1.5 hover:border-line-strong hover:bg-subtle hover:text-ink-1 transition-all">
                 {s}
               </button>
             ))}
@@ -90,7 +90,7 @@ export default function Recall() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-danger mb-5">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-danger mb-5">
           {error}
         </div>
       )}
@@ -112,14 +112,16 @@ export default function Recall() {
       {result && (
         <div>
           {result.cannotAnswer ? (
-            <div className="bg-surface border border-line rounded-lg p-5 mb-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-4 h-4 text-ink-3" />
-                <span className="text-[13px] font-medium text-ink-1">Not enough memory</span>
+            <div className="bg-surface border border-line rounded-xl p-5 mb-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-ink-4" />
+                  <span className="text-[13px] font-medium text-ink-1">Not enough memory to answer</span>
+                </div>
                 <ConfidenceBadge confidence={result.confidence} showBar />
               </div>
               <p className="text-[13px] text-ink-2 leading-relaxed">
-                Found {result.sourceNodes.length} related memories but confidence is too low. Connect more sources to improve coverage.
+                Found {result.sourceNodes.length} related {result.sourceNodes.length === 1 ? 'memory' : 'memories'} but confidence is below threshold. Connect more sources or rephrase the question.
               </p>
             </div>
           ) : (
@@ -130,31 +132,33 @@ export default function Recall() {
               </div>
 
               {result.citations.length > 0 && (
-                <div className="bg-surface border border-line rounded-lg overflow-hidden mb-4 shadow-sm">
-                  {result.citations.map((c, i) => (
-                    <div key={c.nodeId} className={cn('flex gap-4 p-4 row-hover group', i < result.citations.length - 1 && 'border-b border-line')}>
+                <div className="bg-surface border border-line rounded-xl overflow-hidden mb-4 shadow-sm">
+                  {result.citations.map((c, i) => {
+                    const node = result.sourceNodes.find(n => n.id === c.sourceNodeId)
+                    return (
+                    <div key={`${c.sourceNodeId}-${i}`} className={cn('flex gap-4 p-4 row-hover group', i < result.citations.length - 1 && 'border-b border-line')}>
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div className="w-2 h-2 rounded-full bg-amber mt-1" />
                         {i < result.citations.length - 1 && <div className="w-px flex-1 bg-line mt-1.5" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1"><SourcePill source={sourceFromCitation(c)} /></div>
-                        <p className="text-[13px] font-medium text-ink-1 mb-0.5">{c.title}</p>
-                        {c.snippet && <p className="text-[12px] text-ink-2 leading-relaxed">{c.snippet}</p>}
-                        {c.externalUrl && (
-                          <a href={c.externalUrl} target="_blank" rel="noreferrer"
+                        <p className="text-[13px] font-medium text-ink-1 mb-0.5">{node?.title ?? c.claim}</p>
+                        <p className="text-[12px] text-ink-2 leading-relaxed">{c.claim}</p>
+                        {c.sourceUrl && (
+                          <a href={c.sourceUrl} target="_blank" rel="noreferrer"
                             className="text-[11px] text-primary hover:text-primary-hover mt-1 inline-flex items-center gap-1 transition-colors">
                             View source <ArrowRight className="w-3 h-3" />
                           </a>
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
 
               {result.answer && (
-                <div className="bg-amber/[0.04] border border-amber/25 rounded-lg p-5 mb-4">
+                <div className="bg-amber/[0.04] border border-amber/25 rounded-xl p-5 mb-4">
                   <p className="text-[10px] font-semibold text-amber uppercase tracking-wider mb-2.5">Answer</p>
                   <p className="text-[13.5px] text-ink-1 leading-relaxed">{result.answer}</p>
                   {result.citations.length > 0 && (

@@ -1,6 +1,16 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '@/infra/db/client.js'
 import { connectedSources } from '@/infra/db/schema/index.js'
+import { decryptSecret, encryptSecret } from '@/infra/secret-box.js'
+
+type ConnectorRow = typeof connectedSources.$inferSelect
+
+function decryptConnector(row: ConnectorRow): ConnectorRow {
+  return {
+    ...row,
+    accessToken: decryptSecret(row.accessToken),
+  }
+}
 
 export async function listConnectors(tenantId: string) {
   return db
@@ -26,7 +36,7 @@ export async function findConnector(tenantId: string, source: string) {
       eq(connectedSources.source, source),
     ))
     .limit(1)
-  return row ?? null
+  return row ? decryptConnector(row) : null
 }
 
 export async function upsertConnector(opts: {
@@ -35,17 +45,19 @@ export async function upsertConnector(opts: {
   accessToken: string
   metadata:    string
 }) {
+  const encryptedAccessToken = encryptSecret(opts.accessToken)
   const [row] = await db
     .insert(connectedSources)
     .values({
       ...opts,
+      accessToken: encryptedAccessToken,
       isActive: true,
       syncError: null,
     })
     .onConflictDoUpdate({
       target: [connectedSources.tenantId, connectedSources.source],
       set: {
-        accessToken: opts.accessToken,
+        accessToken: encryptedAccessToken,
         metadata:    opts.metadata,
         isActive:    true,
         syncError:   null,
@@ -54,7 +66,7 @@ export async function upsertConnector(opts: {
     })
     .returning()
   if (!row) throw new Error('upsertConnector returned no row')
-  return row
+  return decryptConnector(row)
 }
 
 export async function markSyncComplete(id: string) {

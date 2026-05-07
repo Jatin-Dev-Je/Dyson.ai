@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Zap, Github, MessageSquare, Users, Sparkles } from 'lucide-react'
+import { ArrowRight, Github, MessageSquare, Sparkles } from 'lucide-react'
 import { DysonMark } from '@/components/shared/DysonMark'
 import { cn } from '@/lib/utils'
 
