@@ -178,6 +178,12 @@ export async function buildApp() {
   await app.register(import('./modules/notifications/notifications.routes.js'), { prefix: '/api/v1/notifications' })
   await app.register(import('./modules/agent/agent.routes.js'),             { prefix: '/api/v1/agent' })
 
+  // ── Agentic brain modules ─────────────────────────────────────────────────
+  await app.register(import('./modules/beliefs/beliefs.routes.js'),         { prefix: '/api/v1' })
+  await app.register(import('./modules/conflicts/conflicts.routes.js'),     { prefix: '/api/v1' })
+  await app.register(import('./modules/agent-feed/agent-feed.routes.js'),   { prefix: '/api/v1' })
+  await app.register(import('./modules/health/health.routes.js'),           { prefix: '/api/v1' })
+
   // ── Model Context Protocol (MCP) ──────────────────────────────────────────
   // Mounted at /mcp so Claude Desktop / Cursor / Continue / custom agents can
   // connect via Streamable HTTP using their Dyson API key.

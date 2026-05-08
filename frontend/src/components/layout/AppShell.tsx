@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-do
 import {
   Brain, Network, Users, Search, Settings,
   ChevronDown, ChevronLeft, ChevronRight, LogOut,
-  Plus, Bell, LayoutDashboard,
+  Plus, Bell, LayoutDashboard, Zap, AlertTriangle, BarChart2,
 } from 'lucide-react'
 import { authApi, tokens } from '@/lib/api'
 
@@ -464,6 +464,9 @@ function Topbar() {
     ['/app/decisions',        'Memory Graph'],
     ['/app/onboarding-packs', 'Team Briefings'],
     ['/app/search',           'Search'],
+    ['/app/agent-feed',       'Agent Activity'],
+    ['/app/conflicts',        'Conflicts'],
+    ['/app/health',           'Knowledge Health'],
     ['/app/settings',         'Settings'],
   ]
   const title = titles.find(([k]) => location.pathname.startsWith(k))?.[1] ?? 'Home'
@@ -591,10 +594,18 @@ export default function AppShell() {
 
           {/* ── Navigation ─────────────────────────────────────────────── */}
           <div style={{ padding: collapsed ? '2px 10px' : '2px 8px', flexShrink: 0 }}>
-            <NavItem to="/app"                  icon={LayoutDashboard} label="Home"           exact />
-            <NavItem to="/app/recall"           icon={Brain}           label="Recall"         />
-            <NavItem to="/app/decisions"        icon={Network}         label="Memory Graph"   badge={8} />
-            <NavItem to="/app/onboarding-packs" icon={Users}           label="Team Briefings" />
+            <NavItem to="/app"                  icon={LayoutDashboard} label="Home"            exact />
+            <NavItem to="/app/recall"           icon={Brain}           label="Recall"          />
+            <NavItem to="/app/decisions"        icon={Network}         label="Memory Graph"    badge={8} />
+            <NavItem to="/app/onboarding-packs" icon={Users}           label="Team Briefings"  />
+          </div>
+
+          {/* ── Agentic brain ───────────────────────────────────────── */}
+          <div style={{ padding: collapsed ? '0 10px' : '0 8px', flexShrink: 0 }}>
+            <SectionLabel label="Brain" />
+            <NavItem to="/app/agent-feed" icon={Zap}           label="Agent Activity" />
+            <NavItem to="/app/conflicts"  icon={AlertTriangle}  label="Conflicts"      />
+            <NavItem to="/app/health"     icon={BarChart2}      label="Knowledge Health" />
           </div>
 
           {/* ── Sources ─────────────────────────────────────────────────── */}

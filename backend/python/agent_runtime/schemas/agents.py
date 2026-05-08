@@ -11,11 +11,16 @@ from pydantic import BaseModel, Field, field_validator
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
 class AgentType(StrEnum):
-    POSTMORTEM       = "postmortem"
-    PR_REVIEW        = "pr_review"
-    ONBOARDING       = "onboarding"
-    DECISION_CAPTURE = "decision_capture"
-    WEEKLY_DIGEST    = "weekly_digest"
+    POSTMORTEM              = "postmortem"
+    PR_REVIEW               = "pr_review"
+    ONBOARDING              = "onboarding"
+    DECISION_CAPTURE        = "decision_capture"
+    WEEKLY_DIGEST           = "weekly_digest"
+    RELATIONSHIP_INFERENCE  = "relationship_inference"
+    CONFLICT_DETECTION      = "conflict_detection"
+    PRE_MEETING_BRIEF       = "pre_meeting_brief"
+    KNOWLEDGE_HEALTH        = "knowledge_health"
+    ORCHESTRATOR            = "orchestrator"
 
 
 class AgentStatus(StrEnum):
@@ -193,3 +198,172 @@ class EmbedResponse(BaseModel):
     embeddings: list[list[float]]
     model:      str
     dim:        int
+
+
+# ─── Orchestrator ─────────────────────────────────────────────────────────────
+
+class TriggerType(StrEnum):
+    NEW_NODE         = "new_node"
+    NEW_DECISION     = "new_decision"
+    MEETING_SOON     = "meeting_soon"
+    SCHEDULED_DIGEST = "scheduled_digest"
+    HEALTH_CHECK     = "health_check"
+    INCIDENT         = "incident"
+    PR_OPENED        = "pr_opened"
+
+
+class OrchestratorRequest(BaseModel):
+    tenant_id:    str
+    trigger_type: TriggerType
+    payload:      dict[str, Any] = Field(default_factory=dict)
+
+
+class OrchestratorResponse(BaseModel):
+    run_id:       str = Field(default_factory=lambda: f"run_{uuid4().hex[:12]}")
+    trigger_type: str
+    agent_used:   str
+    success:      bool
+    output:       dict[str, Any]
+    latency_ms:   int
+    error:        str | None = None
+    triggered_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ─── Relationship inference ───────────────────────────────────────────────────
+
+class RelationshipInferenceRequest(BaseModel):
+    tenant_id:    str
+    node_id:      str
+    node_title:   str
+    node_summary: str = ""
+    node_source:  str = "unknown"
+    node_type:    str = "context"
+
+
+class InferredEdge(BaseModel):
+    from_id:    str
+    to_id:      str
+    type:       str
+    confidence: float = Field(ge=0.0, le=1.0)
+    reason:     str
+
+
+class RelationshipInferenceResponse(BaseModel):
+    run_id:        str = Field(default_factory=lambda: f"run_{uuid4().hex[:12]}")
+    node_id:       str
+    edges_created: int
+    new_edges:     list[InferredEdge]
+    resolved_questions: list[str]
+    challenged_beliefs: list[str]
+    confidence:    float = Field(ge=0.0, le=1.0)
+    latency_ms:    int
+
+
+# ─── Conflict detection ───────────────────────────────────────────────────────
+
+class ConflictDetectionRequest(BaseModel):
+    tenant_id:        str
+    decision_id:      str
+    decision_title:   str
+    decision_summary: str = ""
+    decision_source:  str = "unknown"
+
+
+class DetectedConflict(BaseModel):
+    item_id:         str
+    item_type:       str
+    statement:       str
+    conflict_reason: str
+    severity:        str
+    confidence:      float = Field(ge=0.0, le=1.0)
+
+
+class ConflictDetectionResponse(BaseModel):
+    run_id:       str = Field(default_factory=lambda: f"run_{uuid4().hex[:12]}")
+    decision_id:  str
+    has_conflicts: bool
+    severity:     str
+    conflicts:    list[DetectedConflict]
+    conflict_ids: list[str]
+    alert_sent:   bool
+    latency_ms:   int
+
+
+# ─── Pre-meeting brief ────────────────────────────────────────────────────────
+
+class PreMeetingBriefRequest(BaseModel):
+    tenant_id:     str
+    meeting_id:    str
+    meeting_title: str
+    meeting_time:  str
+    attendee_ids:  list[str] = []
+    agenda:        str | None = None
+
+
+class BriefSection(BaseModel):
+    heading: str
+    items:   list[str]
+
+
+class PreMeetingBriefResponse(BaseModel):
+    run_id:        str = Field(default_factory=lambda: f"run_{uuid4().hex[:12]}")
+    meeting_id:    str
+    brief_id:      str | None
+    title:         str
+    summary:       str
+    sections:      list[BriefSection]
+    sent_to:       list[str]
+    latency_ms:    int
+
+
+# ─── Digest ───────────────────────────────────────────────────────────────────
+
+class DigestRequest(BaseModel):
+    tenant_id:     str
+    team:          str
+    recipient_ids: list[str] = []
+    period_days:   int = Field(default=7, ge=1, le=30)
+
+
+class DigestSection(BaseModel):
+    type:    str
+    title:   str
+    items:   list[Any] = []
+    content: str = ""
+    data:    dict[str, Any] = Field(default_factory=dict)
+
+
+class DigestResponse(BaseModel):
+    run_id:         str = Field(default_factory=lambda: f"run_{uuid4().hex[:12]}")
+    team:           str
+    digest_id:      str | None
+    title:          str
+    sections:       list[DigestSection]
+    decision_count: int
+    question_count: int
+    sent_count:     int
+    latency_ms:     int
+
+
+# ─── Knowledge health ─────────────────────────────────────────────────────────
+
+class HealthScores(BaseModel):
+    overall:      float
+    freshness:    float
+    connectivity: float
+    coverage:     float
+    conflicts:    float
+
+
+class KnowledgeHealthResponse(BaseModel):
+    run_id:            str = Field(default_factory=lambda: f"run_{uuid4().hex[:12]}")
+    health_id:         str | None
+    scores:            HealthScores
+    total_decisions:   int
+    stale_count:       int
+    at_risk_count:     int
+    open_questions:    int
+    unresolved_conflicts: int
+    recommendations:   list[str]
+    report_title:      str
+    latency_ms:        int

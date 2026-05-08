@@ -16,6 +16,9 @@ import DecisionLog    from '@/pages/app/DecisionLog'
 import OnboardingPacks from '@/pages/app/onboarding-packs/OnboardingPacks'
 import PackDetail     from '@/pages/app/onboarding-packs/PackDetail'
 import GlobalSearch   from '@/pages/app/GlobalSearch'
+import AgentFeed      from '@/pages/app/AgentFeed'
+import KnowledgeHealth from '@/pages/app/KnowledgeHealth'
+import Conflicts      from '@/pages/app/Conflicts'
 import SettingsLayout from '@/pages/settings/SettingsLayout'
 import Profile        from '@/pages/settings/Profile'
 import Workspace      from '@/pages/settings/Workspace'
@@ -59,6 +62,9 @@ export default function App() {
             <Route path="onboarding-packs"     element={<OnboardingPacks />} />
             <Route path="onboarding-packs/:id" element={<PackDetail />} />
             <Route path="search"               element={<GlobalSearch />} />
+            <Route path="agent-feed"           element={<AgentFeed />} />
+            <Route path="health"               element={<KnowledgeHealth />} />
+            <Route path="conflicts"            element={<Conflicts />} />
 
             <Route path="settings" element={<SettingsLayout />}>
               <Route index                element={<Navigate to="profile" replace />} />
